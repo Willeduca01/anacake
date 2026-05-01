@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="70%" stop-color="#f0d6d6"/>
+      <stop offset="100%" stop-color="#d4a0a0" stop-opacity="0.4"/>
+    </radialGradient>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="url(#bg)"/>
+  <circle cx="100" cy="100" r="82" fill="#fdf6f0" stroke="#6b4443" stroke-width="3"/>
+  <text x="100" y="105" text-anchor="middle" font-family="Georgia, serif" font-size="36" font-style="italic" fill="#6b4443" font-weight="400">Ana</text>
+  <text x="100" y="145" text-anchor="middle" font-family="Georgia, serif" font-size="38" fill="#4a2c2a" font-weight="700" letter-spacing="4">CAKE</text>
+  <!-- Cake icon -->
+  <g transform="translate(75, 35) scale(0.45)">
+    <rect x="15" y="50" width="70" height="25" rx="4" fill="#4a2c2a"/>
+    <rect x="10" y="30" width="80" height="25" rx="4" fill="#6b4443"/>
+    <rect x="20" y="12" width="60" height="22" rx="4" fill="#d4a0a0"/>
+    <circle cx="30" cy="12" r="5" fill="#e8c4c4"/>
+    <circle cx="50" cy="8" r="6" fill="#f0d6d6"/>
+    <circle cx="70" cy="12" r="5" fill="#e8c4c4"/>
+    <rect x="47" y="-5" width="6" height="15" rx="2" fill="#4a2c2a"/>
+    <ellipse cx="50" cy="-8" rx="4" ry="6" fill="#d4a0a0" opacity="0.8"/>
+  </g>
+</g>
+</svg>
