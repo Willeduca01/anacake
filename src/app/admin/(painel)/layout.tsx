@@ -1,24 +1,25 @@
-import { listarProdutos } from "@/lib/produtos";
+import AdminNav from "@/app/admin/AdminNav";
 import { logoutAction } from "@/app/admin/actions";
-import AdminProdutos from "@/app/admin/AdminProdutos";
-
-export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Admin | Ana Cake",
   robots: { index: false, follow: false },
 };
 
-export default async function AdminPage() {
-  const produtos = await listarProdutos();
-
+export default function PainelLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <div className="min-h-screen bg-cream">
       <header className="border-b border-rose-light bg-white">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-chocolate">Painel Ana Cake</h1>
-            <p className="text-xs text-chocolate-muted">Gerenciamento de cardápio</p>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between gap-4">
+          <div className="flex items-center gap-6">
+            <span className="text-lg font-bold text-chocolate whitespace-nowrap">
+              Ana Cake
+            </span>
+            <AdminNav />
           </div>
           <form action={logoutAction}>
             <button
@@ -32,7 +33,7 @@ export default async function AdminPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
-        <AdminProdutos produtos={produtos} />
+        {children}
       </main>
     </div>
   );

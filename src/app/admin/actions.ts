@@ -11,6 +11,7 @@ import {
   excluirProduto,
   type ProdutoInput,
 } from "@/lib/produtos";
+import { registrarVenda, EstoqueInsuficienteError } from "@/lib/vendas";
 
 function cookieSecure(): boolean {
   return process.env.COOKIE_SECURE === "true";
@@ -82,6 +83,7 @@ function parseProduto(formData: FormData): ProdutoInput {
 export async function criarProdutoAction(formData: FormData) {
   await criarProduto(parseProduto(formData));
   revalidatePath("/admin");
+  revalidatePath("/admin/produtos");
 }
 
 export async function atualizarProdutoAction(formData: FormData) {
@@ -89,6 +91,7 @@ export async function atualizarProdutoAction(formData: FormData) {
   if (Number.isNaN(id)) throw new Error("ID inválido.");
   await atualizarProduto(id, parseProduto(formData));
   revalidatePath("/admin");
+  revalidatePath("/admin/produtos");
 }
 
 export async function excluirProdutoAction(formData: FormData) {
@@ -96,4 +99,41 @@ export async function excluirProdutoAction(formData: FormData) {
   if (Number.isNaN(id)) throw new Error("ID inválido.");
   await excluirProduto(id);
   revalidatePath("/admin");
+  revalidatePath("/admin/produtos");
+}
+
+export type VendaFormState = { ok: boolean; message: string };
+
+export async function registrarVendaAction(
+  _prev: VendaFormState,
+  formData: FormData
+): Promise<VendaFormState> {
+  const produtoId = Number(formData.get("produto_id"));
+  const quantidade = Number(formData.get("quantidade"));
+  const metodo = String(formData.get("metodo_pagamento") ?? "").trim();
+
+  if (Number.isNaN(produtoId)) {
+    return { ok: false, message: "Selecione um produto." };
+  }
+  if (Number.isNaN(quantidade) || quantidade <= 0) {
+    return { ok: false, message: "Quantidade inválida." };
+  }
+
+  try {
+    await registrarVenda({
+      produto_id: produtoId,
+      quantidade: Math.trunc(quantidade),
+      metodo_pagamento: metodo || null,
+    });
+  } catch (err) {
+    if (err instanceof EstoqueInsuficienteError) {
+      return { ok: false, message: err.message };
+    }
+    return { ok: false, message: "Erro ao registrar a venda." };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/vendas");
+  revalidatePath("/admin/produtos");
+  return { ok: true, message: "Venda registrada com sucesso!" };
 }

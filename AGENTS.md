@@ -31,3 +31,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - *Guardar o hash bcrypt cru no `.env`:* o `$` do hash é interpretado como variável pelo loader de env do Next/dotenv-expand — por isso usamos base64.
 
 **Impacto:** Novas dependências: `pg`, `jose`, `bcryptjs`. Novo `.env` obrigatório (ver `.env.example`); sem ele, o app sobe mas o `/admin` não funciona. O chrome público (Header/Footer/carrinho) foi isolado das rotas `/admin` via `AppShell`. **Risco de segurança em aberto:** o site roda em HTTP puro — o login trafega em texto puro. Enquanto não houver HTTPS, manter `COOKIE_SECURE=false`; ao habilitar TLS, definir `COOKIE_SECURE=true`. Recomenda-se restringir `/admin` por IP no nginx e/ou adicionar HTTPS antes de uso real. Utilitário `gen-cred.cjs` gera hash+secret para rotação de senha.
+
+### 2026-06-05 - Dashboard de vendas no /admin (registro de vendas + métricas)
+
+**Decisão:** Estender o `/admin` com navegação em abas (**Dashboard · Produtos · Vendas**) usando route group `(painel)` + layout compartilhado, mantendo `/admin/login` fora do grupo. A tabela `vendas` (já existente: `produto_id`, `quantidade`, `valor_total`, `data_venda`, `metodo_pagamento`) é **reaproveitada** — não foram criadas tabelas novas. Adicionado fluxo **"Registrar venda"** (server action transacional) que insere em `vendas` e **baixa `estoque_atual`** em `produtos` (`BEGIN/COMMIT`, `SELECT ... FOR UPDATE`, rollback em erro). O Dashboard agrega via SQL (KPIs de faturamento/ticket/estoque, faturamento dos últimos 30 dias com `generate_series`, top produtos, faturamento por categoria, alerta de estoque baixo). Gráficos com **Recharts** (client components). Índices `idx_vendas_data` e `idx_vendas_produto` criados no postgres.
+
+**Contexto:** A tabela `vendas` existia mas estava **vazia** — nenhum fluxo gravava vendas (pedidos só saíam por link de WhatsApp, sem persistência). Para o dashboard ter dados reais, o admin passou a registrar vendas manualmente. A estrutura de dados necessária já existia em `produtos` + `vendas`, então optou-se por reaproveitá-la em vez de criar entidades novas.
+
+**Alternativas descartadas:**
+- *Criar tabelas novas (pedidos/itens/clientes):* desnecessário para o escopo atual; `produtos`+`vendas` cobrem os indicadores pedidos. Pode ser revisto se surgir necessidade de pedidos com múltiplos itens/clientes.
+- *Captura automática de vendas via WhatsApp/n8n:* exigiria integração externa e confirmação de pedido; fora do escopo. Registro manual no admin resolve agora.
+- *Gráficos em CSS puro (sem dependência):* descartado por limitar a riqueza visual; preferiu-se Recharts (decisão aprovada pela usuária).
+
+**Impacto:** Nova dependência `recharts`. `/admin` agora é o Dashboard; CRUD de produtos movido para `/admin/produtos`; nova `/admin/vendas`. Registrar venda **altera estoque** (decrementa), refletindo no painel de produtos. Sem novas variáveis de `.env`. Migração de banco: rodar os `CREATE INDEX IF NOT EXISTS` (idempotentes) no deploy.
