@@ -1,0 +1,99 @@
+"use server";
+
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
+import { criarSessao, SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/auth";
+import {
+  criarProduto,
+  atualizarProduto,
+  excluirProduto,
+  type ProdutoInput,
+} from "@/lib/produtos";
+
+function cookieSecure(): boolean {
+  return process.env.COOKIE_SECURE === "true";
+}
+
+export async function loginAction(formData: FormData) {
+  const usuario = String(formData.get("usuario") ?? "").trim();
+  const senha = String(formData.get("senha") ?? "");
+
+  const adminUser = process.env.ADMIN_USER;
+  const adminHashB64 = process.env.ADMIN_PASSWORD_HASH_B64;
+  const adminHash = adminHashB64
+    ? Buffer.from(adminHashB64, "base64").toString("utf8")
+    : "";
+
+  if (!adminUser || !adminHash) {
+    redirect("/admin/login?error=config");
+  }
+
+  const usuarioOk = usuario === adminUser;
+  const senhaOk = usuarioOk ? await bcrypt.compare(senha, adminHash) : false;
+
+  if (!usuarioOk || !senhaOk) {
+    redirect("/admin/login?error=1");
+  }
+
+  const token = await criarSessao(adminUser);
+  const store = await cookies();
+  store.set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: cookieSecure(),
+    path: "/",
+    maxAge: SESSION_MAX_AGE,
+  });
+
+  redirect("/admin");
+}
+
+export async function logoutAction() {
+  const store = await cookies();
+  store.delete(SESSION_COOKIE);
+  redirect("/admin/login");
+}
+
+function parseProduto(formData: FormData): ProdutoInput {
+  const nome = String(formData.get("nome") ?? "").trim();
+  const descricao = String(formData.get("descricao") ?? "").trim();
+  const categoria = String(formData.get("categoria") ?? "").trim();
+  const urlImagem = String(formData.get("url_imagem") ?? "").trim();
+  const preco = Number(formData.get("preco"));
+  const estoque = Number(formData.get("estoque_atual"));
+
+  if (!nome) throw new Error("Nome é obrigatório.");
+  if (Number.isNaN(preco) || preco < 0) throw new Error("Preço inválido.");
+  if (Number.isNaN(estoque) || estoque < 0) throw new Error("Estoque inválido.");
+
+  return {
+    nome,
+    descricao: descricao || null,
+    preco,
+    estoque_atual: Math.trunc(estoque),
+    categoria: categoria || null,
+    url_imagem: urlImagem || null,
+    ativo: formData.get("ativo") === "on",
+  };
+}
+
+export async function criarProdutoAction(formData: FormData) {
+  await criarProduto(parseProduto(formData));
+  revalidatePath("/admin");
+}
+
+export async function atualizarProdutoAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (Number.isNaN(id)) throw new Error("ID inválido.");
+  await atualizarProduto(id, parseProduto(formData));
+  revalidatePath("/admin");
+}
+
+export async function excluirProdutoAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (Number.isNaN(id)) throw new Error("ID inválido.");
+  await excluirProduto(id);
+  revalidatePath("/admin");
+}

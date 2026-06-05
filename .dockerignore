@@ -9,6 +9,8 @@ CLAUDE.md
 Dockerfile
 .dockerignore
 docker-compose.yml
+.env
 .env*.local
+gen-cred.cjs
 .vscode
 .idea
