@@ -59,7 +59,14 @@ export default function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-rose-soft" />
-                <span>(11) 99999-9999</span>
+                <a
+                  href="https://wa.me/5519978293375"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-rose-light transition-colors"
+                >
+                  (19) 97829-3375
+                </a>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-rose-soft" />
@@ -68,12 +75,12 @@ export default function Footer() {
               <li className="flex items-center gap-2">
                 <AtSign className="h-4 w-4 text-rose-soft" />
                 <a
-                  href="https://instagram.com"
+                  href="https://www.instagram.com/confeitaria_ana_cake"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-rose-light transition-colors"
                 >
-                  @anacake
+                  @confeitaria_ana_cake
                 </a>
               </li>
             </ul>

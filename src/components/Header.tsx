@@ -67,7 +67,7 @@ export default function Header() {
 
             <div className="hidden md:flex items-center gap-3">
               <a
-                href="https://instagram.com"
+                href="https://www.instagram.com/confeitaria_ana_cake"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-chocolate-muted hover:text-rose-pastel transition-colors"
@@ -75,7 +75,7 @@ export default function Header() {
                 <AtSign className="h-5 w-5" />
               </a>
               <a
-                href="https://wa.me/5511999999999"
+                href="https://wa.me/5519978293375"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-full bg-rose-pastel px-5 py-2 text-sm font-medium text-white hover:bg-chocolate-light transition-colors"
@@ -117,7 +117,7 @@ export default function Header() {
                 </Link>
               ))}
               <a
-                href="https://wa.me/5511999999999"
+                href="https://wa.me/5519978293375"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-rose-pastel px-5 py-2.5 text-sm font-medium text-white hover:bg-chocolate-light transition-colors"

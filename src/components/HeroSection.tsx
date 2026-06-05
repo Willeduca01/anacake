@@ -36,7 +36,7 @@ export default function HeroSection() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <a
-                href="https://wa.me/5511999999999"
+                href="https://wa.me/5519978293375"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-rose-pastel px-7 py-3 text-sm font-semibold text-chocolate hover:bg-rose-light transition-colors"

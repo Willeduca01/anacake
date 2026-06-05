@@ -5,7 +5,7 @@ import { MapPin, Clock, ExternalLink } from "lucide-react";
 
 export default function LocationSection() {
   const enderecoGoogle = encodeURI(
-    "https://www.google.com/maps/search/Rua+das+Flores,+123+-+Centro,+São+Paulo+-+SP"
+    "https://www.google.com/maps/place/R. Bento de Pinha, 225, Monte Mor - SP, 13190-000"
   );
 
   return (
@@ -36,9 +36,9 @@ export default function LocationSection() {
                 <div>
                   <h3 className="font-semibold text-chocolate mb-1">Endereço</h3>
                   <p className="text-sm text-chocolate-muted leading-relaxed">
-                    Rua das Flores, 123 — Centro
+                    R. Bento de Pinha, 225
                     <br />
-                    São Paulo — SP, 01000-000
+                    Monte Mor — SP, 13190-000
                   </p>
                 </div>
               </div>

@@ -138,7 +138,7 @@ export default function CartDrawer() {
                   </div>
 
                   <a
-                    href={`https://wa.me/5511999999999?text=${encodeURIComponent(
+                    href={`https://wa.me/5519978293375?text=${encodeURIComponent(
                       montarMensagem(itens, totalPrecoFormatado)
                     )}`}
                     target="_blank"
