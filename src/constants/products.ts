@@ -3,6 +3,7 @@ export interface ProdutoAPI {
   preco: string;
   estoque_atual: number;
   categoria: string;
+  url_imagem?: string | null;
 }
 
 export interface Produto {
@@ -10,6 +11,7 @@ export interface Produto {
   preco: number;
   estoque: number;
   categoria: string;
+  imagem?: string | null;
 }
 
 export const API_CARDAPIO_URL =
@@ -30,12 +32,18 @@ export function imagemPorCategoria(categoria: string): string {
 }
 
 export function parseProdutoAPI(item: ProdutoAPI): Produto {
+  const imagem = item.url_imagem?.trim();
   return {
     nome: item.nome,
     preco: parseFloat(item.preco),
     estoque: item.estoque_atual,
     categoria: item.categoria,
+    imagem: imagem ? imagem : null,
   };
+}
+
+export function fonteImagem(produto: Produto): string {
+  return produto.imagem ?? imagemPorCategoria(produto.categoria);
 }
 
 export function formatarPreco(valor: number): string {

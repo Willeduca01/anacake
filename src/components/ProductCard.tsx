@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { ShoppingBag, Check } from "lucide-react";
 import Image from "next/image";
-import { type Produto, formatarPreco, imagemPorCategoria } from "@/constants/products";
+import { type Produto, formatarPreco, fonteImagem } from "@/constants/products";
 import { useCart } from "@/contexts/CartContext";
 
 function StockBadge({ estoque }: { estoque: number }) {
@@ -49,7 +49,7 @@ export default function ProductCard({ produto }: { produto: Produto }) {
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-cream">
         <Image
-          src={imagemPorCategoria(produto.categoria)}
+          src={fonteImagem(produto)}
           alt={produto.nome}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"

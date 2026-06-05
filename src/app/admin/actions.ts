@@ -9,6 +9,8 @@ import {
   criarProduto,
   atualizarProduto,
   excluirProduto,
+  definirImagemProduto,
+  removerImagemProduto,
   type ProdutoInput,
 } from "@/lib/produtos";
 import { registrarVenda, EstoqueInsuficienteError } from "@/lib/vendas";
@@ -67,7 +69,6 @@ function parseProduto(formData: FormData): ProdutoInput {
   const nome = String(formData.get("nome") ?? "").trim();
   const descricao = String(formData.get("descricao") ?? "").trim();
   const categoria = String(formData.get("categoria") ?? "").trim();
-  const urlImagem = String(formData.get("url_imagem") ?? "").trim();
   const preco = Number(formData.get("preco"));
   const estoque = Number(formData.get("estoque_atual"));
 
@@ -81,13 +82,36 @@ function parseProduto(formData: FormData): ProdutoInput {
     preco,
     estoque_atual: Math.trunc(estoque),
     categoria: categoria || null,
-    url_imagem: urlImagem || null,
     ativo: formData.get("ativo") === "on",
   };
 }
 
+const MIMES_IMAGEM = ["image/jpeg", "image/png", "image/webp"];
+const MAX_IMAGEM_BYTES = 4 * 1024 * 1024; // 4MB (a UI ja reduz antes de enviar)
+
+async function processarImagem(formData: FormData, id: number): Promise<void> {
+  if (formData.get("remover_imagem") === "on") {
+    await removerImagemProduto(id);
+    return;
+  }
+
+  const arquivo = formData.get("imagem");
+  if (!(arquivo instanceof File) || arquivo.size === 0) return;
+
+  if (!MIMES_IMAGEM.includes(arquivo.type)) {
+    throw new Error("Formato de imagem inválido (use JPG, PNG ou WebP).");
+  }
+  if (arquivo.size > MAX_IMAGEM_BYTES) {
+    throw new Error("Imagem muito grande (máx. 4MB).");
+  }
+
+  const buffer = Buffer.from(await arquivo.arrayBuffer());
+  await definirImagemProduto(id, buffer, arquivo.type);
+}
+
 export async function criarProdutoAction(formData: FormData) {
-  await criarProduto(parseProduto(formData));
+  const produto = await criarProduto(parseProduto(formData));
+  await processarImagem(formData, produto.id);
   revalidatePath("/admin");
   revalidatePath("/admin/produtos");
 }
@@ -96,6 +120,7 @@ export async function atualizarProdutoAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (Number.isNaN(id)) throw new Error("ID inválido.");
   await atualizarProduto(id, parseProduto(formData));
+  await processarImagem(formData, id);
   revalidatePath("/admin");
   revalidatePath("/admin/produtos");
 }

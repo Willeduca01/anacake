@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Minus, Trash2, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import { useCart } from "@/contexts/CartContext";
-import { formatarPreco, imagemPorCategoria } from "@/constants/products";
+import { formatarPreco, fonteImagem } from "@/constants/products";
 import { METODOS_PAGAMENTO } from "@/constants/pagamento";
 import { criarPedidoAction } from "@/app/actions/pedidos";
 
@@ -104,7 +104,7 @@ export default function CartDrawer() {
                     <li key={produto.nome} className="py-4 flex gap-4">
                       <div className="relative h-16 w-16 flex-shrink-0 rounded-xl overflow-hidden bg-cream">
                         <Image
-                          src={imagemPorCategoria(produto.categoria)}
+                          src={fonteImagem(produto)}
                           alt={produto.nome}
                           fill
                           className="object-cover"

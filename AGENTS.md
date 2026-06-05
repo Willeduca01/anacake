@@ -74,3 +74,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 **Impacto:** Migração: criar `pedidos` + `pedido_itens` (+ índices) no postgres (idempotente). **Endpoint público de escrita** (criar pedido) sem autenticação — risco de spam de pedidos falsos; aceitável para o porte atual, com o admin como filtro (só confirma os reais). Pedido é criado no **clique** (intenção), não no envio efetivo do WhatsApp. Confirmar pedido **altera estoque** e alimenta Dashboard/Vendas como qualquer venda.
 
 **Adendo (mesma data):** Carrinho passou a coletar também a **forma de pagamento** (coluna `pedidos.metodo_pagamento`), com as mesmas opções da aba Vendas, agora centralizadas em `src/constants/pagamento.ts` (usado por carrinho, `RegistrarVenda` e validação da action). Na confirmação, a venda herda esse método (fallback `WhatsApp` se nulo). Migração idempotente: `ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS metodo_pagamento`.
+
+### 2026-06-05 - Upload de imagem de produto (no banco) + exibição no site
+
+**Decisão:** No admin de Produtos, o campo "URL da imagem" virou **upload de arquivo**. A imagem é **reduzida no navegador** (canvas, máx. 1000px, JPEG ~0.82 — sem dependência nova) e enviada via server action, que valida tipo (JPG/PNG/WebP) e tamanho (≤4MB) e grava os **bytes no postgres** (colunas `produtos.imagem_dados BYTEA` + `imagem_mime`). A imagem é servida por **`GET /api/produtos/[id]/imagem`** (cache `immutable`). Ao salvar, `produtos.url_imagem` recebe `"/api/produtos/<id>/imagem?v=<epoch>"` (o `?v=` invalida o cache quando a imagem troca). O site público usa `fonteImagem(produto)` = `produto.imagem ?? imagemPorCategoria(categoria)` em `ProductCard` e `CartDrawer`.
+
+**Contexto:** Pedido da usuária: adicionar imagem direto, sem URL. O container é recriado a cada deploy (deploy pull-based), então o filesystem do app é volátil — salvar arquivo em disco do container não persiste. O cardápio público vem do **webhook do n8n**, que hoje retorna só `nome/preco/estoque_atual/categoria` (sem id/imagem).
+
+**Alternativas descartadas:**
+- *Volume Docker na VM:* persistiria, mas exige editar compose/infra e o backup do banco não cobriria as imagens.
+- *Storage externo (Azure Blob/Cloudinary/S3):* conta + credenciais + dependência nova — overkill para o catálogo atual.
+- *Redimensionar no servidor (sharp):* dependência nativa pesada numa VM de 892MB; resolvido no cliente via canvas.
+
+**Impacto:** Migração idempotente: `ALTER TABLE produtos ADD COLUMN IF NOT EXISTS imagem_dados BYTEA, imagem_mime`. **Pendência fora deste repo:** para a imagem aparecer no site, o **workflow do n8n precisa passar a retornar `url_imagem`** no SELECT do cardápio (a usuária faz isso). Até lá, o site cai no fallback por categoria (sem quebra). `ProdutoInput` não tem mais `url_imagem` (gerenciada pelo upload). A rota de imagem é pública (são imagens de produto).
