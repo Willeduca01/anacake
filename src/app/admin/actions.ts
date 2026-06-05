@@ -12,6 +12,12 @@ import {
   type ProdutoInput,
 } from "@/lib/produtos";
 import { registrarVenda, EstoqueInsuficienteError } from "@/lib/vendas";
+import {
+  confirmarPedido,
+  recusarPedido,
+  ProdutoNaoEncontradoError,
+  EstoqueInsuficientePedidoError,
+} from "@/lib/pedidos";
 
 function cookieSecure(): boolean {
   return process.env.COOKIE_SECURE === "true";
@@ -136,4 +142,40 @@ export async function registrarVendaAction(
   revalidatePath("/admin/vendas");
   revalidatePath("/admin/produtos");
   return { ok: true, message: "Venda registrada com sucesso!" };
+}
+
+export type PedidoActionResult = { ok: boolean; message: string };
+
+export async function confirmarPedidoAction(
+  pedidoId: number
+): Promise<PedidoActionResult> {
+  try {
+    await confirmarPedido(pedidoId);
+  } catch (err) {
+    if (
+      err instanceof ProdutoNaoEncontradoError ||
+      err instanceof EstoqueInsuficientePedidoError
+    ) {
+      return { ok: false, message: err.message };
+    }
+    return { ok: false, message: "Erro ao confirmar o pedido." };
+  }
+  revalidatePath("/admin");
+  revalidatePath("/admin/pedidos");
+  revalidatePath("/admin/vendas");
+  revalidatePath("/admin/produtos");
+  return { ok: true, message: "Pedido confirmado e venda registrada!" };
+}
+
+export async function recusarPedidoAction(
+  pedidoId: number
+): Promise<PedidoActionResult> {
+  try {
+    await recusarPedido(pedidoId);
+  } catch {
+    return { ok: false, message: "Erro ao recusar o pedido." };
+  }
+  revalidatePath("/admin");
+  revalidatePath("/admin/pedidos");
+  return { ok: true, message: "Pedido recusado." };
 }

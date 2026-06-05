@@ -1,16 +1,25 @@
 import AdminNav from "@/app/admin/AdminNav";
 import { logoutAction } from "@/app/admin/actions";
+import { contarPedidosPendentes } from "@/lib/pedidos";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Admin | Ana Cake",
   robots: { index: false, follow: false },
 };
 
-export default function PainelLayout({
+export default async function PainelLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  let pendentes = 0;
+  try {
+    pendentes = await contarPedidosPendentes();
+  } catch {
+    pendentes = 0;
+  }
   return (
     <div className="min-h-screen bg-cream">
       <header className="border-b border-rose-light bg-white">
@@ -19,7 +28,7 @@ export default function PainelLayout({
             <span className="text-lg font-bold text-chocolate whitespace-nowrap">
               Ana Cake
             </span>
-            <AdminNav />
+            <AdminNav pedidosPendentes={pendentes} />
           </div>
           <form action={logoutAction}>
             <button

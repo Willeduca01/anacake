@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Minus, Trash2, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import { useCart } from "@/contexts/CartContext";
 import { formatarPreco, imagemPorCategoria } from "@/constants/products";
+import { criarPedidoAction } from "@/app/actions/pedidos";
 
 export default function CartDrawer() {
   const {
@@ -18,6 +20,28 @@ export default function CartDrawer() {
     totalItens,
     totalPrecoFormatado,
   } = useCart();
+
+  const [nome, setNome] = useState("");
+
+  const enviarPedido = () => {
+    const waUrl = `https://wa.me/5519978293375?text=${encodeURIComponent(
+      montarMensagem(itens, totalPrecoFormatado, nome)
+    )}`;
+    // Abre o WhatsApp de forma sincrona (dentro do gesto do usuario) para
+    // nao ser bloqueado por popup, e registra o pedido em segundo plano.
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+    void criarPedidoAction({
+      cliente_nome: nome,
+      itens: itens.map(({ produto, quantidade }) => ({
+        produto_nome: produto.nome,
+        quantidade,
+        preco_unit: produto.preco,
+      })),
+    }).catch(() => {});
+    setNome("");
+    limpar();
+    fecharSacola();
+  };
 
   return (
     <AnimatePresence>
@@ -137,16 +161,30 @@ export default function CartDrawer() {
                     </span>
                   </div>
 
-                  <a
-                    href={`https://wa.me/5519978293375?text=${encodeURIComponent(
-                      montarMensagem(itens, totalPrecoFormatado)
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <div>
+                    <label
+                      htmlFor="cliente-nome"
+                      className="block text-xs font-medium text-chocolate-muted mb-1"
+                    >
+                      Seu nome (opcional)
+                    </label>
+                    <input
+                      id="cliente-nome"
+                      type="text"
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value)}
+                      placeholder="Como podemos te chamar?"
+                      maxLength={120}
+                      className="w-full rounded-lg border border-rose-light bg-white px-3 py-2 text-sm text-chocolate focus:border-rose-pastel focus:outline-none focus:ring-2 focus:ring-rose-pastel/30"
+                    />
+                  </div>
+
+                  <button
+                    onClick={enviarPedido}
                     className="block w-full rounded-full bg-rose-pastel py-3 text-center text-sm font-semibold text-white shadow-lg shadow-rose-pastel/30 hover:bg-chocolate-light transition-colors"
                   >
                     Enviar Pedido via WhatsApp
-                  </a>
+                  </button>
 
                   <button
                     onClick={limpar}
@@ -166,11 +204,15 @@ export default function CartDrawer() {
 
 function montarMensagem(
   itens: { produto: { nome: string; preco: number }; quantidade: number }[],
-  total: string
+  total: string,
+  nome?: string
 ): string {
   const linhas = itens.map(
     ({ produto, quantidade }) =>
       `• ${quantidade}x ${produto.nome} — ${formatarPreco(produto.preco * quantidade)}`
   );
-  return `Olá! Gostaria de fazer o seguinte pedido:\n\n${linhas.join("\n")}\n\n*Total: ${total}*`;
+  const saudacao = nome && nome.trim()
+    ? `Olá! Aqui é ${nome.trim()}. Gostaria de fazer o seguinte pedido:`
+    : "Olá! Gostaria de fazer o seguinte pedido:";
+  return `${saudacao}\n\n${linhas.join("\n")}\n\n*Total: ${total}*`;
 }

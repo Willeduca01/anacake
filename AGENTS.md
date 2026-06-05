@@ -58,3 +58,17 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - *Pacote GHCR público (pull anônimo):* seria tokenless, mas a alteração de visibilidade pública não pôde ser aplicada de forma confiável (UI; sem API para isso) — pull anônimo seguiu retornando `unauthorized`. Abandonado em favor do token.
 
 **Impacto:** A imagem fica **privada** no GHCR. A VM autentica uma vez com um **PAT classic `read:packages`** via `docker login ghcr.io -u Willeduca01` (credencial em `/root/.docker/config.json`, fora do repositório). **Atenção:** se o token tiver expiração, refazer o `docker login` antes de expirar (senão o `pull` falha e a VM continua na imagem atual, sem downtime). Não há mais build na VM (deploys em segundos, sem mexer no n8n). Latência de deploy ~ até 3 min (intervalo do timer). Novos arquivos versionados: workflow, `scripts/deploy.sh`, `.gitattributes` (LF). Deploy manual imediato na VM: `sudo systemctl start anacake-deploy.service`.
+
+### 2026-06-05 - Pedidos do site -> confirmação no admin -> venda
+
+**Decisão:** Ao enviar o pedido pelo carrinho (botão WhatsApp), além de abrir o WhatsApp, o site grava um **pedido pendente** no banco via **server action pública** (`src/app/actions/pedidos.ts`). Novas tabelas **`pedidos`** (status `pendente/confirmado/recusado`, `cliente_nome` opcional, `total`, `created_at`, `confirmado_em`) e **`pedido_itens`** (`produto_nome`, `quantidade`, `preco_unit`). Nova aba admin **`/admin/pedidos`** lista os pendentes com **badge de notificação** no nav (polling a cada 20s via `GET /api/admin/pedidos-count`, rota protegida por sessão). Ao **Confirmar**, uma transação resolve cada item `produto_nome → produtos.id`, insere em `vendas` (método `WhatsApp`), baixa o estoque e marca o pedido `confirmado` (tudo-ou-nada); **Recusar** apenas marca `recusado`.
+
+**Contexto:** Os pedidos saíam só por link de WhatsApp, sem rastro no sistema. O cardápio público vem do webhook do n8n e **não expõe o `id` do produto** — só nome/preço/categoria. Por isso o item do pedido guarda o **nome** e a confirmação resolve para `produtos.id` (nomes são praticamente únicos). O valor da venda usa o **preço do pedido** (o que o cliente viu), por decisão da usuária.
+
+**Alternativas descartadas:**
+- *Status `pendente` dentro da própria `vendas`:* poluiria as agregações do dashboard (que assumem `vendas` = vendas concretizadas). Mantém-se `vendas` só para vendas confirmadas; pedidos ficam em tabela própria.
+- *FK direta produto no pedido:* impossível — o carrinho (via n8n) não tem o id; resolve-se por nome na confirmação.
+- *Notificação em tempo real (SSE/WebSocket):* complexa e pesada para a VM (892MB) e um único admin; polling de 20s atende.
+- *Item do pedido em JSONB:* optou-se por tabela normalizada `pedido_itens` (FK, integridade, consultas).
+
+**Impacto:** Migração: criar `pedidos` + `pedido_itens` (+ índices) no postgres (idempotente). **Endpoint público de escrita** (criar pedido) sem autenticação — risco de spam de pedidos falsos; aceitável para o porte atual, com o admin como filtro (só confirma os reais). Pedido é criado no **clique** (intenção), não no envio efetivo do WhatsApp. Confirmar pedido **altera estoque** e alimenta Dashboard/Vendas como qualquer venda.
