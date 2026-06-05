@@ -14,6 +14,7 @@ export interface Pedido {
   id: number;
   status: "pendente" | "confirmado" | "recusado";
   cliente_nome: string | null;
+  metodo_pagamento: string | null;
   total: number;
   created_at: string;
   itens: PedidoItem[];
@@ -42,6 +43,7 @@ export class EstoqueInsuficientePedidoError extends Error {
 
 export async function criarPedido(
   clienteNome: string | null,
+  metodoPagamento: string | null,
   itens: PedidoItemInput[]
 ): Promise<number> {
   const validos = itens.filter(
@@ -59,8 +61,8 @@ export async function criarPedido(
   try {
     await client.query("BEGIN");
     const { rows } = await client.query<{ id: number }>(
-      `INSERT INTO pedidos (cliente_nome, total) VALUES ($1, $2) RETURNING id`,
-      [clienteNome, total]
+      `INSERT INTO pedidos (cliente_nome, metodo_pagamento, total) VALUES ($1, $2, $3) RETURNING id`,
+      [clienteNome, metodoPagamento, total]
     );
     const pedidoId = rows[0].id;
 
@@ -87,11 +89,12 @@ export async function listarPedidosPendentes(): Promise<Pedido[]> {
     id: number;
     status: Pedido["status"];
     cliente_nome: string | null;
+    metodo_pagamento: string | null;
     total: number;
     created_at: string;
     itens: PedidoItem[] | null;
   }>(
-    `SELECT p.id, p.status, p.cliente_nome, p.total::float8 AS total,
+    `SELECT p.id, p.status, p.cliente_nome, p.metodo_pagamento, p.total::float8 AS total,
             to_char(p.created_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS created_at,
             COALESCE(
               json_agg(
@@ -125,14 +128,18 @@ export async function confirmarPedido(pedidoId: number): Promise<void> {
   try {
     await client.query("BEGIN");
 
-    const { rows: pedidoRows } = await client.query<{ status: string }>(
-      `SELECT status FROM pedidos WHERE id = $1 FOR UPDATE`,
+    const { rows: pedidoRows } = await client.query<{
+      status: string;
+      metodo_pagamento: string | null;
+    }>(
+      `SELECT status, metodo_pagamento FROM pedidos WHERE id = $1 FOR UPDATE`,
       [pedidoId]
     );
     if (pedidoRows.length === 0) throw new Error("Pedido não encontrado.");
     if (pedidoRows[0].status !== "pendente") {
       throw new Error("Pedido já processado.");
     }
+    const metodoPagamento = pedidoRows[0].metodo_pagamento ?? "WhatsApp";
 
     const { rows: itens } = await client.query<{
       produto_nome: string;
@@ -163,8 +170,8 @@ export async function confirmarPedido(pedidoId: number): Promise<void> {
       const valorTotal = Number((item.preco_unit * item.quantidade).toFixed(2));
       await client.query(
         `INSERT INTO vendas (produto_id, quantidade, valor_total, metodo_pagamento)
-         VALUES ($1, $2, $3, 'WhatsApp')`,
-        [produtoId, item.quantidade, valorTotal]
+         VALUES ($1, $2, $3, $4)`,
+        [produtoId, item.quantidade, valorTotal, metodoPagamento]
       );
       await client.query(
         `UPDATE produtos SET estoque_atual = estoque_atual - $1 WHERE id = $2`,

@@ -1,9 +1,11 @@
 "use server";
 
 import { criarPedido, type PedidoItemInput } from "@/lib/pedidos";
+import { metodoValido } from "@/constants/pagamento";
 
 export interface CriarPedidoPayload {
   cliente_nome?: string | null;
+  metodo_pagamento?: string | null;
   itens: PedidoItemInput[];
 }
 
@@ -12,6 +14,8 @@ export async function criarPedidoAction(
 ): Promise<{ ok: boolean }> {
   try {
     const nome = (payload.cliente_nome ?? "").trim().slice(0, 120) || null;
+    const metodoRaw = (payload.metodo_pagamento ?? "").trim();
+    const metodo = metodoValido(metodoRaw) ? metodoRaw : null;
     const itens = (payload.itens ?? [])
       .filter(
         (i) =>
@@ -28,7 +32,7 @@ export async function criarPedidoAction(
 
     if (itens.length === 0) return { ok: false };
 
-    await criarPedido(nome, itens);
+    await criarPedido(nome, metodo, itens);
     return { ok: true };
   } catch {
     return { ok: false };

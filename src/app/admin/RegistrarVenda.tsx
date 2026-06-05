@@ -5,6 +5,7 @@ import {
   registrarVendaAction,
   type VendaFormState,
 } from "@/app/admin/actions";
+import { METODOS_PAGAMENTO } from "@/constants/pagamento";
 
 interface ProdutoOpcao {
   id: number;
@@ -17,8 +18,6 @@ interface ProdutoOpcao {
 const inputClass =
   "w-full rounded-lg border border-rose-light bg-warm-white px-3 py-2 text-sm text-chocolate focus:border-rose-pastel focus:outline-none focus:ring-2 focus:ring-rose-pastel/30";
 const labelClass = "block text-xs font-medium text-chocolate-muted mb-1";
-
-const METODOS = ["Dinheiro", "Pix", "Cartão de Crédito", "Cartão de Débito", "Outro"];
 
 const initial: VendaFormState = { ok: false, message: "" };
 
@@ -78,7 +77,7 @@ export default function RegistrarVenda({
         <div>
           <label className={labelClass}>Pagamento</label>
           <select name="metodo_pagamento" defaultValue="Dinheiro" className={inputClass}>
-            {METODOS.map((m) => (
+            {METODOS_PAGAMENTO.map((m) => (
               <option key={m} value={m}>
                 {m}
               </option>

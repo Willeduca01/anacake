@@ -75,7 +75,14 @@ export default function PedidoCard({ pedido }: { pedido: Pedido }) {
         ))}
       </ul>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-chocolate-muted">Pagamento</span>
+        <span className="font-medium text-chocolate">
+          {pedido.metodo_pagamento || "Não informado"}
+        </span>
+      </div>
+
+      <div className="mt-1 flex items-center justify-between">
         <span className="text-sm text-chocolate-muted">Total</span>
         <span className="text-lg font-bold text-chocolate">
           {brl(pedido.total)}

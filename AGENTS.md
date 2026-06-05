@@ -72,3 +72,5 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - *Item do pedido em JSONB:* optou-se por tabela normalizada `pedido_itens` (FK, integridade, consultas).
 
 **Impacto:** Migração: criar `pedidos` + `pedido_itens` (+ índices) no postgres (idempotente). **Endpoint público de escrita** (criar pedido) sem autenticação — risco de spam de pedidos falsos; aceitável para o porte atual, com o admin como filtro (só confirma os reais). Pedido é criado no **clique** (intenção), não no envio efetivo do WhatsApp. Confirmar pedido **altera estoque** e alimenta Dashboard/Vendas como qualquer venda.
+
+**Adendo (mesma data):** Carrinho passou a coletar também a **forma de pagamento** (coluna `pedidos.metodo_pagamento`), com as mesmas opções da aba Vendas, agora centralizadas em `src/constants/pagamento.ts` (usado por carrinho, `RegistrarVenda` e validação da action). Na confirmação, a venda herda esse método (fallback `WhatsApp` se nulo). Migração idempotente: `ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS metodo_pagamento`.

@@ -6,6 +6,7 @@ import { X, Plus, Minus, Trash2, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import { useCart } from "@/contexts/CartContext";
 import { formatarPreco, imagemPorCategoria } from "@/constants/products";
+import { METODOS_PAGAMENTO } from "@/constants/pagamento";
 import { criarPedidoAction } from "@/app/actions/pedidos";
 
 export default function CartDrawer() {
@@ -22,16 +23,18 @@ export default function CartDrawer() {
   } = useCart();
 
   const [nome, setNome] = useState("");
+  const [metodo, setMetodo] = useState<string>(METODOS_PAGAMENTO[0]);
 
   const enviarPedido = () => {
     const waUrl = `https://wa.me/5519978293375?text=${encodeURIComponent(
-      montarMensagem(itens, totalPrecoFormatado, nome)
+      montarMensagem(itens, totalPrecoFormatado, nome, metodo)
     )}`;
     // Abre o WhatsApp de forma sincrona (dentro do gesto do usuario) para
     // nao ser bloqueado por popup, e registra o pedido em segundo plano.
     window.open(waUrl, "_blank", "noopener,noreferrer");
     void criarPedidoAction({
       cliente_nome: nome,
+      metodo_pagamento: metodo,
       itens: itens.map(({ produto, quantidade }) => ({
         produto_nome: produto.nome,
         quantidade,
@@ -39,6 +42,7 @@ export default function CartDrawer() {
       })),
     }).catch(() => {});
     setNome("");
+    setMetodo(METODOS_PAGAMENTO[0]);
     limpar();
     fecharSacola();
   };
@@ -179,6 +183,27 @@ export default function CartDrawer() {
                     />
                   </div>
 
+                  <div>
+                    <label
+                      htmlFor="metodo-pagamento"
+                      className="block text-xs font-medium text-chocolate-muted mb-1"
+                    >
+                      Forma de pagamento
+                    </label>
+                    <select
+                      id="metodo-pagamento"
+                      value={metodo}
+                      onChange={(e) => setMetodo(e.target.value)}
+                      className="w-full rounded-lg border border-rose-light bg-white px-3 py-2 text-sm text-chocolate focus:border-rose-pastel focus:outline-none focus:ring-2 focus:ring-rose-pastel/30"
+                    >
+                      {METODOS_PAGAMENTO.map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <button
                     onClick={enviarPedido}
                     className="block w-full rounded-full bg-rose-pastel py-3 text-center text-sm font-semibold text-white shadow-lg shadow-rose-pastel/30 hover:bg-chocolate-light transition-colors"
@@ -205,7 +230,8 @@ export default function CartDrawer() {
 function montarMensagem(
   itens: { produto: { nome: string; preco: number }; quantidade: number }[],
   total: string,
-  nome?: string
+  nome?: string,
+  metodo?: string
 ): string {
   const linhas = itens.map(
     ({ produto, quantidade }) =>
@@ -214,5 +240,6 @@ function montarMensagem(
   const saudacao = nome && nome.trim()
     ? `Olá! Aqui é ${nome.trim()}. Gostaria de fazer o seguinte pedido:`
     : "Olá! Gostaria de fazer o seguinte pedido:";
-  return `${saudacao}\n\n${linhas.join("\n")}\n\n*Total: ${total}*`;
+  const pagamento = metodo ? `\n*Pagamento: ${metodo}*` : "";
+  return `${saudacao}\n\n${linhas.join("\n")}\n\n*Total: ${total}*${pagamento}`;
 }
