@@ -44,3 +44,17 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - *Gráficos em CSS puro (sem dependência):* descartado por limitar a riqueza visual; preferiu-se Recharts (decisão aprovada pela usuária).
 
 **Impacto:** Nova dependência `recharts`. `/admin` agora é o Dashboard; CRUD de produtos movido para `/admin/produtos`; nova `/admin/vendas`. Registrar venda **altera estoque** (decrementa), refletindo no painel de produtos. Sem novas variáveis de `.env`. Migração de banco: rodar os `CREATE INDEX IF NOT EXISTS` (idempotentes) no deploy.
+
+### 2026-06-05 - CI/CD: build no GitHub Actions + deploy pull-based na VM
+
+**Decisão:** Tirar o build de Docker de cima da VM. O **GitHub Actions** (`.github/workflows/build.yml`) builda a imagem a cada push na `main` e publica no **GHCR** (`ghcr.io/willeduca01/anacake:latest` + tag por SHA), autenticando com o `GITHUB_TOKEN` efêmero (sem PAT). A VM **puxa sozinha**: um **systemd timer** (`anacake-deploy.timer`, a cada ~3 min) roda `scripts/deploy.sh`, que faz `git pull --ff-only` (atualiza compose/script), `docker compose pull` e `up -d` (idempotente — só recria se a imagem/config mudou). O `docker-compose.yml` passou a referenciar `image:` (mantendo `build:` para uso local). A VM **não builda mais**.
+
+**Contexto:** A VM tem só **892 MB de RAM**; o `next build` estoura a memória e entra em *swap thrashing* (chegou a travar ~22 min, exigindo pausar o n8n para concluir). Servir os containers 24h cabe tranquilo — o gargalo é exclusivamente o build. Mover o build para os runners do GitHub (RAM de sobra) transforma a VM num servidor de execução puro, sem downtime do n8n a cada deploy.
+
+**Alternativas descartadas:**
+- *Deploy via SSH a partir do Actions (push-based):* exigiria expor a porta 22 da VM aos IPs (amplos) dos runners do GitHub; mais superfície de ataque. Pull-based não abre nenhuma porta.
+- *Watchtower (daemon de auto-update):* container extra consumindo RAM numa VM já apertada; o systemd timer + `compose pull` resolve sem processo residente.
+- *Continuar buildando na VM:* inviável de forma confiável com 892 MB (risco de OOM, lentidão, downtime do n8n).
+- *Imagem privada + PAT na VM:* token de longa duração para rotacionar; optou-se por **pacote GHCR público** (a imagem não contém segredos — o `.env` é injetado em runtime via `env_file`), mantendo a VM tokenless.
+
+**Impacto:** Requer **secrets/configuração one-time**: tornar o pacote `anacake` **público** no GHCR (UI do GitHub, uma vez) para a VM puxar sem login. Não há mais build na VM (deploys em segundos, sem mexer no n8n). Latência de deploy ~ até 3 min (intervalo do timer). Novos arquivos versionados: workflow, `scripts/deploy.sh`, `.gitattributes` (LF). Para deploy manual imediato na VM: `systemctl start anacake-deploy.service` (ou rodar `scripts/deploy.sh`).
