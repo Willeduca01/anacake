@@ -38,6 +38,8 @@ export default function ProductCard({ produto }: { produto: Produto }) {
     abrirSacola();
   };
 
+  const imagemSrc = fonteImagem(produto);
+
   return (
     <motion.div
       layout
@@ -49,9 +51,10 @@ export default function ProductCard({ produto }: { produto: Produto }) {
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-cream">
         <Image
-          src={fonteImagem(produto)}
+          src={imagemSrc}
           alt={produto.nome}
           fill
+          unoptimized={imagemSrc.startsWith("/api/")}
           className="object-cover transition-transform duration-500 group-hover:scale-105"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         />

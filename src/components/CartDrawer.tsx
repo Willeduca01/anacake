@@ -107,6 +107,7 @@ export default function CartDrawer() {
                           src={fonteImagem(produto)}
                           alt={produto.nome}
                           fill
+                          unoptimized={fonteImagem(produto).startsWith("/api/")}
                           className="object-cover"
                           sizes="64px"
                         />
