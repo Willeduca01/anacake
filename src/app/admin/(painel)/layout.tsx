@@ -1,5 +1,6 @@
 import AdminNav from "@/app/admin/AdminNav";
 import { logoutAction } from "@/app/admin/actions";
+import { contarNovasDemo, listarConversasDemo } from "@/lib/mensagens";
 import { contarPedidosPendentes } from "@/lib/pedidos";
 
 export const dynamic = "force-dynamic";
@@ -15,11 +16,13 @@ export default async function PainelLayout({
   children: React.ReactNode;
 }) {
   let pendentes = 0;
+  let mensagensNovas = 0;
   try {
     pendentes = await contarPedidosPendentes();
   } catch {
     pendentes = 0;
   }
+  mensagensNovas = contarNovasDemo(listarConversasDemo());
   return (
     <div className="min-h-screen bg-cream">
       <header className="border-b border-rose-light bg-white">
@@ -28,7 +31,10 @@ export default async function PainelLayout({
             <span className="text-lg font-bold text-chocolate whitespace-nowrap">
               Ana Cake
             </span>
-            <AdminNav pedidosPendentes={pendentes} />
+            <AdminNav
+              pedidosPendentes={pendentes}
+              mensagensNovas={mensagensNovas}
+            />
           </div>
           <form action={logoutAction}>
             <button

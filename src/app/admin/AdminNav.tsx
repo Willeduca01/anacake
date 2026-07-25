@@ -9,12 +9,15 @@ const links = [
   { href: "/admin/produtos", label: "Produtos" },
   { href: "/admin/vendas", label: "Vendas" },
   { href: "/admin/pedidos", label: "Pedidos" },
+  { href: "/admin/mensagens", label: "Mensagens" },
 ];
 
 export default function AdminNav({
   pedidosPendentes = 0,
+  mensagensNovas = 0,
 }: {
   pedidosPendentes?: number;
+  mensagensNovas?: number;
 }) {
   const pathname = usePathname();
   const [pendentes, setPendentes] = useState(pedidosPendentes);
@@ -49,6 +52,12 @@ export default function AdminNav({
             ? pathname === "/admin"
             : pathname.startsWith(link.href);
         const isPedidos = link.href === "/admin/pedidos";
+        const isMensagens = link.href === "/admin/mensagens";
+        const badgeCount = isPedidos
+          ? pendentes
+          : isMensagens
+            ? mensagensNovas
+            : 0;
         return (
           <Link
             key={link.href}
@@ -60,9 +69,9 @@ export default function AdminNav({
             }`}
           >
             {link.label}
-            {isPedidos && pendentes > 0 && (
+            {badgeCount > 0 && (
               <span className="ml-1.5 inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-badge-red px-1.5 text-xs font-bold text-badge-red-text">
-                {pendentes}
+                {badgeCount}
               </span>
             )}
           </Link>
