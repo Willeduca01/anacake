@@ -1,24 +1,10 @@
-import {
-  type ProdutoAPI,
-  API_CARDAPIO_URL,
-  parseProdutoAPI,
-} from "@/constants/products";
+import { listarCardapioPublico } from "@/lib/produtos";
 import CardapioClient from "@/components/CardapioClient";
 
-async function buscarProdutos() {
-  try {
-    const res = await fetch(API_CARDAPIO_URL, { cache: "no-store" });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const lista: ProdutoAPI[] = Array.isArray(data) ? data : data.value ?? [];
-    return lista.map(parseProdutoAPI);
-  } catch {
-    return [];
-  }
-}
+export const dynamic = "force-dynamic";
 
 export default async function CardapioPage() {
-  const produtos = await buscarProdutos();
+  const produtos = await listarCardapioPublico();
 
   return (
     <section className="py-16 sm:py-24 bg-warm-white min-h-[60vh]">

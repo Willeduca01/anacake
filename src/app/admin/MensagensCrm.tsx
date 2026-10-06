@@ -6,6 +6,7 @@ import {
   type ConversaWhatsapp,
   type FilaMensagem,
 } from "@/lib/mensagens";
+import { sanitizarTexto } from "@/lib/sanitize";
 
 const badgePorFila: Record<
   FilaMensagem,
@@ -87,7 +88,8 @@ export default function MensagensCrm({
   const enviarRespostaDemo = () => {
     if (!selecionada || !rascunho.trim()) return;
 
-    const texto = rascunho.trim();
+    const texto = sanitizarTexto(rascunho);
+    if (!texto) return;
     const horario = new Date().toLocaleTimeString("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",

@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { type Produto } from "@/constants/products";
 import MenuFilter from "@/components/MenuFilter";
 import ProductCard from "@/components/ProductCard";
+import { sanitizarTexto } from "@/lib/sanitize";
 
 interface CardapioClientProps {
   produtos: Produto[];
@@ -14,14 +15,16 @@ export default function CardapioClient({ produtos }: CardapioClientProps) {
   const [filtro, setFiltro] = useState("Todos");
 
   const categorias = useMemo(
-    () => [...new Set(produtos.map((p) => p.categoria))],
+    () => [...new Set(produtos.map((p) => sanitizarTexto(p.categoria) || "Outros"))],
     [produtos]
   );
 
+  const filtroSanitizado = sanitizarTexto(filtro) || "Todos";
+
   const produtosFiltrados =
-    filtro === "Todos"
+    filtroSanitizado === "Todos"
       ? produtos
-      : produtos.filter((p) => p.categoria === filtro);
+      : produtos.filter((p) => (sanitizarTexto(p.categoria) || "Outros") === filtroSanitizado);
 
   return (
     <>

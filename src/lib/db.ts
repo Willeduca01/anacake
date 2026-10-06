@@ -8,7 +8,11 @@ export function getPool(): Pool {
     if (!connectionString) {
       throw new Error("DATABASE_URL não configurada no ambiente.");
     }
-    globalForDb.pgPool = new Pool({ connectionString, max: 5 });
+    const pool = new Pool({ connectionString, max: 5 });
+    pool.on("error", (err) => {
+      console.error("Erro inesperado no cliente ocioso do PostgreSQL:", err);
+    });
+    globalForDb.pgPool = pool;
   }
   return globalForDb.pgPool;
 }

@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
+import { cookies } from "next/headers";
 
 export const SESSION_COOKIE = "admin_session";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 dias
@@ -33,4 +34,19 @@ export async function verificarSessao(
   }
 }
 
+/**
+ * Validação rigorosa de autenticação e autorização para Server Actions e APIs.
+ * Lança erro 403 Forbidden caso a sessão seja inexistente, expirada ou não possua role 'admin'.
+ */
+export async function exigirSessaoAdmin(): Promise<JWTPayload> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const sessao = await verificarSessao(token);
+  if (!sessao || sessao.role !== "admin") {
+    throw new Error("403 Forbidden: Sessão administrativa não autorizada.");
+  }
+  return sessao;
+}
+
 export const SESSION_MAX_AGE = MAX_AGE_SECONDS;
+

@@ -8,8 +8,13 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const sessao = await verificarSessao(token);
+
   if (!sessao) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "401 Unauthorized" }, { status: 401 });
+  }
+
+  if (sessao.role !== "admin") {
+    return NextResponse.json({ error: "403 Forbidden" }, { status: 403 });
   }
 
   try {

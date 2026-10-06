@@ -1,4 +1,5 @@
 import { getPool } from "@/lib/db";
+import type { Produto } from "@/constants/products";
 
 export interface ProdutoAdmin {
   id: number;
@@ -21,21 +22,47 @@ export interface ProdutoInput {
   ativo: boolean;
 }
 
-const SELECT_COLS =
-  "id, nome, descricao, preco::float8 AS preco, estoque_atual, categoria, url_imagem, (imagem_dados IS NOT NULL) AS tem_imagem, ativo";
-
 export async function listarProdutos(): Promise<ProdutoAdmin[]> {
   const { rows } = await getPool().query<ProdutoAdmin>(
-    `SELECT ${SELECT_COLS} FROM produtos ORDER BY id ASC`
+    `SELECT id, nome, descricao, preco::float8 AS preco, estoque_atual, categoria, url_imagem, (imagem_dados IS NOT NULL) AS tem_imagem, ativo
+     FROM produtos
+     ORDER BY id ASC`
   );
   return rows;
+}
+
+export async function listarCardapioPublico(): Promise<Produto[]> {
+  try {
+    const { rows } = await getPool().query<{
+      nome: string;
+      preco: number;
+      estoque_atual: number;
+      categoria: string | null;
+      url_imagem: string | null;
+    }>(
+      `SELECT nome, preco::float8 AS preco, estoque_atual, categoria, url_imagem
+       FROM produtos
+       WHERE ativo = true
+       ORDER BY categoria, nome ASC`
+    );
+    return rows.map((r) => ({
+      nome: r.nome,
+      preco: r.preco,
+      estoque: r.estoque_atual,
+      categoria: r.categoria ?? "doces",
+      imagem: r.url_imagem,
+    }));
+  } catch (err) {
+    console.error("Erro ao listar cardapio publico do banco:", err);
+    return [];
+  }
 }
 
 export async function criarProduto(input: ProdutoInput): Promise<ProdutoAdmin> {
   const { rows } = await getPool().query<ProdutoAdmin>(
     `INSERT INTO produtos (nome, descricao, preco, estoque_atual, categoria, ativo)
      VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING ${SELECT_COLS}`,
+     RETURNING id, nome, descricao, preco::float8 AS preco, estoque_atual, categoria, url_imagem, (imagem_dados IS NOT NULL) AS tem_imagem, ativo`,
     [
       input.nome,
       input.descricao,
@@ -57,7 +84,7 @@ export async function atualizarProduto(
      SET nome = $1, descricao = $2, preco = $3, estoque_atual = $4,
          categoria = $5, ativo = $6
      WHERE id = $7
-     RETURNING ${SELECT_COLS}`,
+     RETURNING id, nome, descricao, preco::float8 AS preco, estoque_atual, categoria, url_imagem, (imagem_dados IS NOT NULL) AS tem_imagem, ativo`,
     [
       input.nome,
       input.descricao,
@@ -80,8 +107,6 @@ export async function definirImagemProduto(
   dados: Buffer,
   mime: string
 ): Promise<void> {
-  // url_imagem aponta para a rota que serve os bytes; ?v=<epoch> invalida cache
-  // ao trocar a imagem. O webhook do n8n devolve essa url para o site publico.
   const url = `/api/produtos/${id}/imagem?v=${Date.now()}`;
   await getPool().query(
     `UPDATE produtos SET imagem_dados = $1, imagem_mime = $2, url_imagem = $3 WHERE id = $4`,

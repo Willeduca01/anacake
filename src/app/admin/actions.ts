@@ -4,7 +4,12 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
-import { criarSessao, SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/auth";
+import {
+  criarSessao,
+  exigirSessaoAdmin,
+  SESSION_COOKIE,
+  SESSION_MAX_AGE,
+} from "@/lib/auth";
 import {
   criarProduto,
   atualizarProduto,
@@ -20,12 +25,21 @@ import {
   ProdutoNaoEncontradoError,
   EstoqueInsuficientePedidoError,
 } from "@/lib/pedidos";
+import { obterClientIp, verificarRateLimitLogin } from "@/lib/ratelimit";
+import { sanitizarTexto } from "@/lib/sanitize";
 
 function cookieSecure(): boolean {
   return process.env.COOKIE_SECURE === "true";
 }
 
 export async function loginAction(formData: FormData) {
+  // Tarefa 2: Rate Limiting por IP para mitigar Brute Force no login administrativo
+  const ip = await obterClientIp();
+  const rateLimit = await verificarRateLimitLogin(ip);
+  if (!rateLimit.success) {
+    redirect("/admin/login?error=ratelimit");
+  }
+
   const usuario = String(formData.get("usuario") ?? "").trim();
   const senha = String(formData.get("senha") ?? "");
 
@@ -66,9 +80,10 @@ export async function logoutAction() {
 }
 
 function parseProduto(formData: FormData): ProdutoInput {
-  const nome = String(formData.get("nome") ?? "").trim();
-  const descricao = String(formData.get("descricao") ?? "").trim();
-  const categoria = String(formData.get("categoria") ?? "").trim();
+  // Tarefa 4: Sanitização contra XSS nos inputs de produto
+  const nome = sanitizarTexto(String(formData.get("nome") ?? ""));
+  const descricao = sanitizarTexto(String(formData.get("descricao") ?? ""));
+  const categoria = sanitizarTexto(String(formData.get("categoria") ?? ""));
   const preco = Number(formData.get("preco"));
   const estoque = Number(formData.get("estoque_atual"));
 
@@ -109,7 +124,9 @@ async function processarImagem(formData: FormData, id: number): Promise<void> {
   await definirImagemProduto(id, buffer, arquivo.type);
 }
 
+// Tarefa 1: Proteger Server Actions contra BOLA/IDOR exigindo sessão admin
 export async function criarProdutoAction(formData: FormData) {
+  await exigirSessaoAdmin();
   const produto = await criarProduto(parseProduto(formData));
   await processarImagem(formData, produto.id);
   revalidatePath("/admin");
@@ -117,8 +134,9 @@ export async function criarProdutoAction(formData: FormData) {
 }
 
 export async function atualizarProdutoAction(formData: FormData) {
+  await exigirSessaoAdmin();
   const id = Number(formData.get("id"));
-  if (Number.isNaN(id)) throw new Error("ID inválido.");
+  if (Number.isNaN(id) || id <= 0) throw new Error("ID inválido.");
   await atualizarProduto(id, parseProduto(formData));
   await processarImagem(formData, id);
   revalidatePath("/admin");
@@ -126,8 +144,9 @@ export async function atualizarProdutoAction(formData: FormData) {
 }
 
 export async function excluirProdutoAction(formData: FormData) {
+  await exigirSessaoAdmin();
   const id = Number(formData.get("id"));
-  if (Number.isNaN(id)) throw new Error("ID inválido.");
+  if (Number.isNaN(id) || id <= 0) throw new Error("ID inválido.");
   await excluirProduto(id);
   revalidatePath("/admin");
   revalidatePath("/admin/produtos");
@@ -139,11 +158,12 @@ export async function registrarVendaAction(
   _prev: VendaFormState,
   formData: FormData
 ): Promise<VendaFormState> {
+  await exigirSessaoAdmin();
   const produtoId = Number(formData.get("produto_id"));
   const quantidade = Number(formData.get("quantidade"));
-  const metodo = String(formData.get("metodo_pagamento") ?? "").trim();
+  const metodo = sanitizarTexto(String(formData.get("metodo_pagamento") ?? ""));
 
-  if (Number.isNaN(produtoId)) {
+  if (Number.isNaN(produtoId) || produtoId <= 0) {
     return { ok: false, message: "Selecione um produto." };
   }
   if (Number.isNaN(quantidade) || quantidade <= 0) {
@@ -174,6 +194,11 @@ export type PedidoActionResult = { ok: boolean; message: string };
 export async function confirmarPedidoAction(
   pedidoId: number
 ): Promise<PedidoActionResult> {
+  await exigirSessaoAdmin();
+  if (!pedidoId || Number.isNaN(pedidoId) || pedidoId <= 0) {
+    return { ok: false, message: "ID de pedido inválido." };
+  }
+
   try {
     await confirmarPedido(pedidoId);
   } catch (err) {
@@ -195,6 +220,11 @@ export async function confirmarPedidoAction(
 export async function recusarPedidoAction(
   pedidoId: number
 ): Promise<PedidoActionResult> {
+  await exigirSessaoAdmin();
+  if (!pedidoId || Number.isNaN(pedidoId) || pedidoId <= 0) {
+    return { ok: false, message: "ID de pedido inválido." };
+  }
+
   try {
     await recusarPedido(pedidoId);
   } catch {

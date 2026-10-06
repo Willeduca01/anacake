@@ -15,9 +15,11 @@ export default async function LoginPage({
   const mensagemErro =
     error === "config"
       ? "Credenciais de admin não configuradas no servidor."
-      : error
-        ? "Usuário ou senha inválidos."
-        : null;
+      : error === "ratelimit"
+        ? "Muitas tentativas de login. Aguarde 1 minuto e tente novamente."
+        : error
+          ? "Usuário ou senha inválidos."
+          : null;
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-cream px-4">
