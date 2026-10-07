@@ -11,6 +11,61 @@ async function main() {
   console.log('Connected! Creating tables and indexes...');
   
   await client.query(`
+    CREATE TABLE IF NOT EXISTS insumos_base (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      nome VARCHAR(255) NOT NULL,
+      tipo_medida VARCHAR(20) NOT NULL,
+      unidade_padrao VARCHAR(10) NOT NULL,
+      quantidade_padrao NUMERIC(10, 2) NOT NULL,
+      quantidade_base NUMERIC(10, 2) NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_insumos_base_nome ON insumos_base (nome);
+
+    CREATE TABLE IF NOT EXISTS insumos (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      insumo_base_id UUID REFERENCES insumos_base(id) ON DELETE SET NULL,
+      nome VARCHAR(255) NOT NULL,
+      tipo_medida VARCHAR(20) NOT NULL,
+      formato_compra VARCHAR(20) DEFAULT 'UNIDADE',
+      unidades_por_pack NUMERIC(10, 2) DEFAULT 1,
+      peso_unitario NUMERIC(10, 2),
+      quantidade_embalagem NUMERIC(10, 2) NOT NULL,
+      preco_embalagem NUMERIC(10, 2) NOT NULL,
+      custo_por_unidade_base NUMERIC(10, 4) NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    CREATE TABLE IF NOT EXISTS receitas (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      produto_id INT REFERENCES produtos(id) ON DELETE SET NULL,
+      nome VARCHAR(255) NOT NULL,
+      descricao TEXT,
+      categoria VARCHAR(100) DEFAULT 'doces',
+      rendimento INT NOT NULL DEFAULT 1,
+      custo_embalagem NUMERIC(10, 2) NOT NULL DEFAULT 0,
+      taxa_custos_invisiveis NUMERIC(10, 2) NOT NULL DEFAULT 20,
+      margem_lucro_desejada NUMERIC(10, 2) NOT NULL DEFAULT 150,
+      publicado BOOLEAN NOT NULL DEFAULT false,
+      url_imagem TEXT,
+      imagem_dados BYTEA,
+      imagem_mime VARCHAR(50),
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS receita_insumos (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      receita_id UUID NOT NULL REFERENCES receitas(id) ON DELETE CASCADE,
+      insumo_id UUID NOT NULL REFERENCES insumos(id) ON DELETE RESTRICT,
+      quantidade_utilizada NUMERIC(10, 2) NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_receita_insumos_receita ON receita_insumos(receita_id);
+    CREATE INDEX IF NOT EXISTS idx_receita_insumos_insumo ON receita_insumos(insumo_id);
+
     CREATE TABLE IF NOT EXISTS produtos (
       id SERIAL PRIMARY KEY,
       nome VARCHAR(255) NOT NULL,
