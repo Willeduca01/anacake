@@ -32,7 +32,7 @@ export default function RegistrarVenda({
   );
 
   return (
-    <div className="rounded-2xl border border-rose-light bg-white p-6">
+    <div className="rounded-2xl border border-rose-light bg-white p-4 sm:p-6 shadow-sm">
       <h3 className="mb-4 font-semibold text-chocolate">Registrar venda</h3>
 
       {state.message && (
@@ -89,7 +89,7 @@ export default function RegistrarVenda({
           <button
             type="submit"
             disabled={pending}
-            className="rounded-full bg-rose-pastel px-6 py-2 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors disabled:opacity-60"
+            className="w-full sm:w-auto rounded-full bg-rose-pastel px-6 py-2.5 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors disabled:opacity-60 text-center"
           >
             {pending ? "Registrando…" : "Registrar venda"}
           </button>

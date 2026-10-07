@@ -34,16 +34,18 @@ function Kpi({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-5 ${
+      className={`rounded-2xl border p-3.5 sm:p-5 min-w-0 shadow-2xs ${
         destaque
           ? "border-rose-pastel bg-rose-light/40"
           : "border-rose-light bg-white"
       }`}
     >
-      <p className="text-xs font-medium uppercase tracking-wide text-chocolate-muted">
+      <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-chocolate-muted truncate">
         {label}
       </p>
-      <p className="mt-2 text-2xl font-bold text-chocolate">{valor}</p>
+      <p className="mt-1 sm:mt-2 text-lg sm:text-2xl font-extrabold text-chocolate truncate">
+        {valor}
+      </p>
     </div>
   );
 }
@@ -61,15 +63,15 @@ export default async function DashboardPage() {
     ]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h2 className="text-xl font-bold text-chocolate">Visão geral</h2>
-        <p className="text-sm text-chocolate-muted">
+        <h2 className="text-xl sm:text-2xl font-bold text-chocolate">Visão geral</h2>
+        <p className="text-xs sm:text-sm text-chocolate-muted">
           Indicadores de vendas e estoque da Ana Cake
         </p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         <Kpi label="Faturamento do mês" valor={brl(vendas.faturamento_mes)} destaque />
         <Kpi label="Faturamento total" valor={brl(vendas.faturamento_total)} />
         <Kpi label="Vendas (total)" valor={String(vendas.total_vendas)} />

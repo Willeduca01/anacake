@@ -221,11 +221,11 @@ function ProdutoForm({
         Produto ativo (visível no cardápio)
       </label>
 
-      <div className="flex gap-2 sm:col-span-2">
+      <div className="flex flex-col sm:flex-row gap-2 sm:col-span-2">
         <button
           type="submit"
           disabled={enviando}
-          className="rounded-full bg-rose-pastel px-5 py-2 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors disabled:opacity-60"
+          className="w-full sm:w-auto rounded-full bg-rose-pastel px-6 py-2.5 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors disabled:opacity-60 text-center"
         >
           {enviando ? "Salvando…" : submitLabel}
         </button>
@@ -233,7 +233,7 @@ function ProdutoForm({
           <button
             type="button"
             onClick={onDone}
-            className="rounded-full border border-rose-light px-5 py-2 text-sm font-medium text-chocolate-muted hover:bg-rose-light transition-colors"
+            className="w-full sm:w-auto rounded-full border border-rose-light px-5 py-2.5 text-sm font-medium text-chocolate-muted hover:bg-rose-light transition-colors text-center"
           >
             Cancelar
           </button>
@@ -253,7 +253,7 @@ export default function AdminProdutos({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-chocolate">
           Produtos{" "}
           <span className="text-sm font-normal text-chocolate-muted">
@@ -262,14 +262,14 @@ export default function AdminProdutos({
         </h2>
         <button
           onClick={() => setCriando((v) => !v)}
-          className="rounded-full bg-rose-pastel px-5 py-2 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors"
+          className="rounded-full bg-rose-pastel px-5 py-2.5 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors w-full sm:w-auto text-center"
         >
-          {criando ? "Fechar" : "+ Novo produto"}
+          {criando ? "Fechar formulário" : "+ Novo produto"}
         </button>
       </div>
 
       {criando && (
-        <div className="rounded-2xl border border-rose-light bg-white p-6">
+        <div className="rounded-2xl border border-rose-light bg-white p-4 sm:p-6 shadow-sm">
           <h3 className="mb-4 font-semibold text-chocolate">Novo produto</h3>
           <ProdutoForm
             action={criarProdutoAction}
@@ -279,18 +279,23 @@ export default function AdminProdutos({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-rose-light bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-cream text-left text-chocolate-muted">
-            <tr>
-              <th className="px-4 py-3 font-medium">Nome</th>
-              <th className="px-4 py-3 font-medium">Categoria</th>
-              <th className="px-4 py-3 font-medium">Preço</th>
-              <th className="px-4 py-3 font-medium">Estoque</th>
-              <th className="px-4 py-3 font-medium">Ativo</th>
-              <th className="px-4 py-3 font-medium text-right">Ações</th>
-            </tr>
-          </thead>
+      <div className="overflow-hidden rounded-2xl border border-rose-light bg-white shadow-sm">
+        <div className="sm:hidden px-4 py-2 bg-cream/60 border-b border-rose-light/50 text-[11px] text-chocolate-muted flex items-center justify-between">
+          <span>← Deslize para ver todas as colunas →</span>
+          <span className="font-semibold">{produtos.length} produtos</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[560px]">
+            <thead className="bg-cream text-left text-chocolate-muted border-b border-rose-light/60">
+              <tr>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">Nome</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">Categoria</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">Preço</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">Estoque</th>
+                <th className="px-4 py-3 font-medium whitespace-nowrap">Ativo</th>
+                <th className="px-4 py-3 font-medium text-right whitespace-nowrap">Ações</th>
+              </tr>
+            </thead>
           <tbody>
             {produtos.length === 0 && (
               <tr>
@@ -312,7 +317,8 @@ export default function AdminProdutos({
               />
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   );

@@ -173,7 +173,7 @@ function InsumoItemCombobox({
       </div>
 
       {aberto && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-rose-light bg-white shadow-xl max-h-52 overflow-y-auto">
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-rose-light bg-white shadow-xl max-h-52 overflow-y-auto overscroll-contain">
           {itensFiltrados.length === 0 ? (
             <div className="p-3 text-center text-xs text-chocolate-muted">
               Nenhum insumo encontrado com "{busca}".
@@ -204,9 +204,9 @@ function InsumoItemCombobox({
                         : "text-chocolate"
                     }`}
                   >
-                    <div>
-                      <div className="font-medium text-chocolate">{i.nome}</div>
-                      <div className="text-[11px] text-chocolate-muted">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-chocolate truncate">{i.nome}</div>
+                      <div className="text-[11px] text-chocolate-muted truncate">
                         Custo: {formatarMoeda(i.custo_por_unidade_base)} / 1{sufixo}
                       </div>
                     </div>
@@ -575,7 +575,7 @@ function ReceitaForm({
                 key={linha.tempId}
                 className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 rounded-xl bg-white p-2.5 border border-rose-light/60 shadow-xs"
               >
-                <div className="flex items-center gap-2 flex-1">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
                   <span className="text-xs font-bold text-chocolate-muted w-5 shrink-0 text-center">
                     {idx + 1}.
                   </span>
@@ -586,8 +586,8 @@ function ReceitaForm({
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="relative w-32 shrink-0">
+                <div className="flex items-center justify-between sm:justify-start gap-2 pt-1 sm:pt-0">
+                  <div className="relative flex-1 sm:flex-initial sm:w-32">
                     <input
                       type="number"
                       step="0.01"
@@ -605,7 +605,7 @@ function ReceitaForm({
                   </div>
 
                   <div className="w-24 text-right shrink-0">
-                    <span className="text-[11px] text-chocolate-muted block">Subtotal:</span>
+                    <span className="text-[10px] text-chocolate-muted block">Subtotal:</span>
                     <strong className="text-xs font-bold text-chocolate">
                       {formatarMoeda(subtotal)}
                     </strong>
@@ -616,7 +616,7 @@ function ReceitaForm({
                     onClick={() => removerLinha(linha.tempId)}
                     title="Remover ingrediente"
                     disabled={linhas.length === 1}
-                    className="p-1.5 rounded-lg text-chocolate-muted hover:text-badge-red-text hover:bg-badge-red transition-colors disabled:opacity-30"
+                    className="p-1.5 rounded-lg text-chocolate-muted hover:text-badge-red-text hover:bg-badge-red transition-colors disabled:opacity-30 shrink-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -846,8 +846,8 @@ function ModalPublicarReceita({
       : "Disponibilize este doce da ficha técnica no cardápio de vendas para os clientes.";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-chocolate/50 backdrop-blur-xs animate-in fade-in">
-      <div className="w-full max-w-xl rounded-3xl bg-white border border-rose-light p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-chocolate/50 backdrop-blur-xs animate-in fade-in">
+      <div className="w-full max-w-xl rounded-3xl bg-white border border-rose-light p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 max-h-[92vh] overflow-y-auto">
         <div className="flex items-center justify-between pb-3 border-b border-rose-light/60">
           <div className="flex items-center gap-2.5">
             <div
@@ -1234,9 +1234,9 @@ export default function AdminReceitas({
       {/* CABEÇALHO */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-rose-light/70 pb-4">
         <div>
-          <h2 className="text-2xl font-bold text-chocolate tracking-tight flex items-center gap-2">
-            <ChefHat className="w-6 h-6 text-rose-pastel" />
-            Fichas Técnicas & Precificação
+          <h2 className="text-xl sm:text-2xl font-bold text-chocolate tracking-tight flex items-center gap-2">
+            <ChefHat className="w-6 h-6 text-rose-pastel shrink-0" />
+            <span>Fichas Técnicas & Precificação</span>
           </h2>
           <p className="text-xs text-chocolate-muted mt-0.5">
             Calcule custos exatos, margem de lucro e publique diretamente no cardápio online para seus clientes
@@ -1248,7 +1248,7 @@ export default function AdminReceitas({
             setEditandoReceita(null);
             setCriando((v) => !v);
           }}
-          className="flex items-center gap-2 rounded-full bg-rose-pastel px-5 py-2.5 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors shadow-sm self-start sm:self-auto"
+          className="flex items-center justify-center gap-2 rounded-full bg-rose-pastel px-5 py-2.5 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors shadow-sm w-full sm:w-auto shrink-0"
         >
           <Plus className="w-4 h-4" />
           {criando ? "Fechar formulário" : "Nova Ficha Técnica"}
@@ -1257,7 +1257,7 @@ export default function AdminReceitas({
 
       {/* FORMULÁRIO DE CRIAÇÃO / EDIÇÃO */}
       {(criando || editandoReceita) && (
-        <div className="rounded-2xl border border-rose-light bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-rose-light bg-white p-4 sm:p-6 shadow-sm">
           <h3 className="font-bold text-chocolate mb-4 pb-2 border-b border-rose-light/50 flex items-center gap-2">
             <ChefHat className="w-5 h-5 text-rose-pastel" />
             {editandoReceita ? `Editar Ficha Técnica: ${editandoReceita.nome}` : "Criar Nova Ficha Técnica"}
@@ -1283,12 +1283,12 @@ export default function AdminReceitas({
       )}
 
       {/* BARRA DE PESQUISA */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-chocolate-muted" />
+          <Search className="w-4 h-4 absolute left-3 top-3 text-chocolate-muted" />
           <input
             type="text"
-            placeholder="Pesquisar ficha técnica por nome (ex: bolo, brigadeiro)..."
+            placeholder="Pesquisar ficha técnica por nome..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             className={`${inputClass} pl-9`}
@@ -1323,10 +1323,10 @@ export default function AdminReceitas({
                 className="rounded-2xl border border-rose-light bg-white shadow-xs overflow-hidden transition-all hover:shadow-md"
               >
                 {/* SEÇÃO 1: CABEÇALHO DO CARD (FOTO, NOME, BADGES E AÇÕES) */}
-                <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-rose-light/50">
-                  <div className="flex items-center gap-4 min-w-0 flex-1">
+                <div className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-rose-light/50">
+                  <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
                     {/* MINIATURA DA FOTO DA RECEITA */}
-                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-cream border border-rose-light shrink-0 flex items-center justify-center shadow-xs">
+                    <div className="relative w-14 h-14 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-cream border border-rose-light shrink-0 flex items-center justify-center shadow-xs">
                       {r.url_imagem ? (
                         <img
                           src={r.url_imagem}
@@ -1469,65 +1469,65 @@ export default function AdminReceitas({
                 </div>
 
                 {/* SEÇÃO 2: MÉTRICAS FINANCEIRAS EM GRID COMPLETO (4 COLUNAS) */}
-                <div className="p-4 bg-cream/20 grid grid-cols-2 md:grid-cols-4 gap-3 border-b border-rose-light/40">
-                  <div className="rounded-xl bg-white border border-rose-light/60 p-3 shadow-2xs">
-                    <span className="text-[11px] font-semibold text-chocolate-muted block mb-0.5">
-                      Custo de Produção Total
+                <div className="p-3 sm:p-4 bg-cream/20 grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 border-b border-rose-light/40">
+                  <div className="rounded-xl bg-white border border-rose-light/60 p-2.5 sm:p-3 shadow-2xs">
+                    <span className="text-[10px] sm:text-[11px] font-semibold text-chocolate-muted block mb-0.5 leading-tight">
+                      Custo Produção Total
                     </span>
-                    <strong className="text-base font-extrabold text-chocolate block">
+                    <strong className="text-sm sm:text-base font-extrabold text-chocolate block">
                       {formatarMoeda(r.custo_producao_total)}
                     </strong>
                     {r.rendimento > 1 && (
-                      <span className="text-[11px] text-chocolate-muted block">
-                        {formatarMoeda(r.custo_por_porcao)} por porção/un
+                      <span className="text-[10px] sm:text-[11px] text-chocolate-muted block">
+                        {formatarMoeda(r.custo_por_porcao)} por un
                       </span>
                     )}
                   </div>
 
-                  <div className="rounded-xl bg-rose-light/40 border border-rose-light p-3 shadow-2xs">
-                    <span className="text-[11px] font-semibold text-chocolate-muted block mb-0.5">
-                      Preço Sugerido ({r.margem_lucro_desejada}% lucro)
+                  <div className="rounded-xl bg-rose-light/40 border border-rose-light p-2.5 sm:p-3 shadow-2xs">
+                    <span className="text-[10px] sm:text-[11px] font-semibold text-chocolate-muted block mb-0.5 leading-tight">
+                      Preço Sugerido ({r.margem_lucro_desejada}%)
                     </span>
-                    <strong className="text-base font-black text-chocolate block">
+                    <strong className="text-sm sm:text-base font-black text-chocolate block">
                       {formatarMoeda(r.preco_sugerido_total)}
                     </strong>
                     {r.rendimento > 1 && (
-                      <span className="text-[11px] font-bold text-rose-pastel block">
-                        {formatarMoeda(r.preco_sugerido_porcao)} por porção/un
+                      <span className="text-[10px] sm:text-[11px] font-bold text-rose-pastel block">
+                        {formatarMoeda(r.preco_sugerido_porcao)} por un
                       </span>
                     )}
                   </div>
 
-                  <div className="rounded-xl bg-badge-green border border-badge-green-text/20 p-3 shadow-2xs">
-                    <span className="text-[11px] font-semibold text-badge-green-text block mb-0.5">
-                      Lucro Líquido Estimado
+                  <div className="rounded-xl bg-badge-green border border-badge-green-text/20 p-2.5 sm:p-3 shadow-2xs">
+                    <span className="text-[10px] sm:text-[11px] font-semibold text-badge-green-text block mb-0.5 leading-tight">
+                      Lucro Estimado
                     </span>
-                    <strong className="text-base font-bold text-badge-green-text block">
+                    <strong className="text-sm sm:text-base font-bold text-badge-green-text block">
                       +{formatarMoeda(r.lucro_total)}
                     </strong>
                     {r.rendimento > 1 && (
-                      <span className="text-[11px] text-badge-green-text/80 block">
-                        +{formatarMoeda(r.lucro_por_porcao)} por porção/un
+                      <span className="text-[10px] sm:text-[11px] text-badge-green-text/80 block">
+                        +{formatarMoeda(r.lucro_por_porcao)} por un
                       </span>
                     )}
                   </div>
 
                   {/* BOTÃO EXPANDIR / VER INGREDIENTES */}
-                  <div className="rounded-xl bg-white border border-rose-light/60 p-3 shadow-2xs flex flex-col justify-between">
-                    <span className="text-[11px] font-semibold text-chocolate-muted block mb-0.5">
-                      Composição da Receita
+                  <div className="rounded-xl bg-white border border-rose-light/60 p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
+                    <span className="text-[10px] sm:text-[11px] font-semibold text-chocolate-muted block mb-0.5 leading-tight">
+                      Composição
                     </span>
                     <button
                       onClick={() => toggleExpandir(r.id)}
-                      className="w-full mt-1 flex items-center justify-center gap-1.5 rounded-lg border border-rose-light py-1.5 px-2 text-xs font-bold text-chocolate hover:bg-cream transition-colors"
+                      className="w-full mt-1 flex items-center justify-center gap-1 rounded-lg border border-rose-light py-1.5 px-1.5 text-xs font-bold text-chocolate hover:bg-cream transition-colors text-center"
                     >
                       {expandido ? (
                         <>
-                          <ChevronUp className="w-3.5 h-3.5 text-rose-pastel" /> Ocultar ingredientes
+                          <ChevronUp className="w-3.5 h-3.5 text-rose-pastel shrink-0" /> Ocultar
                         </>
                       ) : (
                         <>
-                          <ChevronDown className="w-3.5 h-3.5 text-rose-pastel" /> Ver {r.ingredientes.length} ingredientes
+                          <ChevronDown className="w-3.5 h-3.5 text-rose-pastel shrink-0" /> {r.ingredientes.length} itens
                         </>
                       )}
                     </button>
@@ -1537,11 +1537,16 @@ export default function AdminReceitas({
                 {/* DETALHES EXPANDIDOS COM TABELA DE INGREDIENTES */}
                 {expandido && (
                   <div className="border-t border-rose-light/60 bg-cream/30 p-4 space-y-2">
-                    <h5 className="text-xs font-bold text-chocolate uppercase tracking-wider">
-                      Detalhamento dos Ingredientes:
-                    </h5>
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-xs font-bold text-chocolate uppercase tracking-wider">
+                        Detalhamento dos Ingredientes:
+                      </h5>
+                      <span className="sm:hidden text-[10px] text-chocolate-muted">
+                        ← Deslize tabela →
+                      </span>
+                    </div>
                     <div className="overflow-x-auto rounded-xl border border-rose-light/70 bg-white">
-                      <table className="w-full text-xs">
+                      <table className="w-full text-xs min-w-[460px]">
                         <thead className="bg-cream text-left text-chocolate-muted border-b border-rose-light/60">
                           <tr>
                             <th className="px-3.5 py-2 font-semibold">Ingrediente</th>

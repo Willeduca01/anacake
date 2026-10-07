@@ -22,10 +22,21 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
 }
 
 body {
   background: var(--color-warm-white);
   color: var(--color-chocolate);
   font-family: var(--font-sans);
+  overflow-x: clip;
+}
+
+/* Ocultar barra de rolagem em áreas com h-scroll preservando a rolagem por toque */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

@@ -47,7 +47,7 @@ export default function AdminNav({
   }, [pathname]);
 
   return (
-    <nav className="flex gap-1">
+    <nav className="flex items-center gap-1.5 whitespace-nowrap">
       {links.map((link) => {
         const active =
           link.href === "/admin"
@@ -64,15 +64,15 @@ export default function AdminNav({
           <Link
             key={link.href}
             href={link.href}
-            className={`relative rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+            className={`relative rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap shrink-0 transition-colors ${
               active
-                ? "bg-rose-pastel text-white"
+                ? "bg-rose-pastel text-white shadow-xs"
                 : "text-chocolate-muted hover:bg-rose-light"
             }`}
           >
             {link.label}
             {badgeCount > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-badge-red px-1.5 text-xs font-bold text-badge-red-text">
+              <span className="ml-1.5 inline-flex items-center justify-center h-4.5 min-w-4.5 rounded-full bg-badge-red px-1.5 text-[11px] font-extrabold text-badge-red-text">
                 {badgeCount}
               </span>
             )}

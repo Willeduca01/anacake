@@ -127,8 +127,8 @@ function ProdutoBaseCombobox({
             setBusca(e.target.value);
             if (!aberto) setAberto(true);
           }}
-          placeholder="Pesquise por nome ou clique na seta para ver todos..."
-          className={`${inputClass} pl-9 pr-16 bg-white`}
+          placeholder="Pesquise por nome ou selecione..."
+          className={`${inputClass} pl-9 pr-16 bg-white text-xs sm:text-sm`}
         />
 
         <div className="absolute right-2 flex items-center gap-1">
@@ -163,7 +163,7 @@ function ProdutoBaseCombobox({
 
       {/* DROPDOWN MENU SUSPENSO */}
       {aberto && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-xl border border-rose-light bg-white shadow-xl max-h-64 overflow-y-auto">
+        <div className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-xl border border-rose-light bg-white shadow-xl max-h-56 sm:max-h-64 overflow-y-auto overscroll-contain">
           {/* Opção para digitar manualmente / limpar */}
           <button
             type="button"
@@ -208,9 +208,9 @@ function ProdutoBaseCombobox({
                         : "text-chocolate"
                     }`}
                   >
-                    <div>
-                      <div className="font-medium text-chocolate">{b.nome}</div>
-                      <div className="text-[11px] text-chocolate-muted">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-chocolate truncate">{b.nome}</div>
+                      <div className="text-[11px] text-chocolate-muted truncate">
                         Padrão: {b.quantidade_padrao} {b.unidade_padrao} ({b.quantidade_base} {sufixo})
                       </div>
                     </div>
@@ -330,11 +330,11 @@ function InsumoBaseForm({
         </span>
       </div>
 
-      <div className="flex gap-2 sm:col-span-3 mt-1">
+      <div className="flex flex-col sm:flex-row gap-2 sm:col-span-3 mt-1">
         <button
           type="submit"
           disabled={enviando}
-          className="rounded-full bg-rose-pastel px-6 py-2 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors disabled:opacity-60 shadow-sm"
+          className="w-full sm:w-auto rounded-full bg-rose-pastel px-6 py-2.5 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors disabled:opacity-60 shadow-sm"
         >
           {enviando ? "Salvando…" : submitLabel}
         </button>
@@ -342,7 +342,7 @@ function InsumoBaseForm({
           <button
             type="button"
             onClick={onDone}
-            className="rounded-full border border-rose-light px-5 py-2 text-sm font-medium text-chocolate-muted hover:bg-rose-light transition-colors"
+            className="w-full sm:w-auto rounded-full border border-rose-light px-5 py-2.5 text-sm font-medium text-chocolate-muted hover:bg-rose-light transition-colors text-center"
           >
             Cancelar
           </button>
@@ -682,11 +682,11 @@ function InsumoForm({
         </div>
       </div>
 
-      <div className="flex gap-2 pt-2">
+      <div className="flex flex-col sm:flex-row gap-2 pt-2">
         <button
           type="submit"
           disabled={enviando}
-          className="rounded-full bg-rose-pastel px-6 py-2.5 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors disabled:opacity-60 shadow-sm"
+          className="w-full sm:w-auto rounded-full bg-rose-pastel px-6 py-2.5 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors disabled:opacity-60 shadow-sm"
         >
           {enviando ? "Salvando…" : submitLabel}
         </button>
@@ -694,7 +694,7 @@ function InsumoForm({
           <button
             type="button"
             onClick={onDone}
-            className="rounded-full border border-rose-light px-5 py-2.5 text-sm font-medium text-chocolate-muted hover:bg-rose-light transition-colors"
+            className="w-full sm:w-auto rounded-full border border-rose-light px-5 py-2.5 text-sm font-medium text-chocolate-muted hover:bg-rose-light transition-colors text-center"
           >
             Cancelar
           </button>
@@ -750,9 +750,9 @@ export default function AdminInsumos({
   return (
     <div className="space-y-6">
       {/* NAVEGAÇÃO POR ABAS */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-rose-light/70 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-rose-light/70 pb-4">
         <div>
-          <h2 className="text-2xl font-bold text-chocolate tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-bold text-chocolate tracking-tight">
             Gestão de Insumos & Estoque
           </h2>
           <p className="text-xs text-chocolate-muted mt-0.5">
@@ -760,17 +760,17 @@ export default function AdminInsumos({
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 rounded-full bg-cream p-1 border border-rose-light">
+        <div className="flex items-center gap-1.5 rounded-full bg-cream p-1 border border-rose-light overflow-x-auto max-w-full scrollbar-none w-full sm:w-auto">
           <button
             onClick={() => setAbaAtiva("estoque")}
-            className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-full px-3.5 sm:px-4 py-2 text-xs font-semibold whitespace-nowrap transition-all ${
               abaAtiva === "estoque"
                 ? "bg-rose-pastel text-white shadow-sm"
                 : "text-chocolate-muted hover:text-chocolate"
             }`}
           >
-            <Boxes className="w-4 h-4" />
-            Estoque de Insumos
+            <Boxes className="w-4 h-4 shrink-0" />
+            <span>Estoque de Insumos</span>
             <span
               className={`rounded-full px-1.5 py-0.5 text-[11px] ${
                 abaAtiva === "estoque"
@@ -784,14 +784,14 @@ export default function AdminInsumos({
 
           <button
             onClick={() => setAbaAtiva("produtos_base")}
-            className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-full px-3.5 sm:px-4 py-2 text-xs font-semibold whitespace-nowrap transition-all ${
               abaAtiva === "produtos_base"
                 ? "bg-rose-pastel text-white shadow-sm"
                 : "text-chocolate-muted hover:text-chocolate"
             }`}
           >
-            <Layers className="w-4 h-4" />
-            Produtos & Itens Base
+            <Layers className="w-4 h-4 shrink-0" />
+            <span>Produtos & Itens Base</span>
             <span
               className={`rounded-full px-1.5 py-0.5 text-[11px] ${
                 abaAtiva === "produtos_base"
@@ -810,10 +810,10 @@ export default function AdminInsumos({
           ======================================================== */}
       {abaAtiva === "estoque" && (
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex flex-1 items-center gap-2 max-w-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row flex-1 items-stretch sm:items-center gap-2 max-w-xl">
               <div className="relative flex-1">
-                <Search className="w-4 h-4 absolute left-3 top-2.5 text-chocolate-muted" />
+                <Search className="w-4 h-4 absolute left-3 top-3 text-chocolate-muted" />
                 <input
                   type="text"
                   placeholder="Buscar insumo por nome..."
@@ -826,7 +826,7 @@ export default function AdminInsumos({
               <select
                 value={filtroMedida}
                 onChange={(e) => setFiltroMedida(e.target.value)}
-                className={`${inputClass} w-auto text-xs`}
+                className={`${inputClass} sm:w-auto text-xs py-2`}
               >
                 <option value="TODOS">Todas as Medidas</option>
                 <option value="GRAMA">Gramas (g)</option>
@@ -837,7 +837,7 @@ export default function AdminInsumos({
 
             <button
               onClick={() => setCriandoInsumo((v) => !v)}
-              className="flex items-center gap-2 rounded-full bg-rose-pastel px-5 py-2.5 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors shadow-sm"
+              className="flex items-center justify-center gap-2 rounded-full bg-rose-pastel px-5 py-2.5 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors shadow-sm w-full sm:w-auto shrink-0"
             >
               <Plus className="w-4 h-4" />
               {criandoInsumo ? "Fechar formulário" : "Novo insumo (Estoque)"}
@@ -846,7 +846,7 @@ export default function AdminInsumos({
 
           {/* FORMULÁRIO DE NOVO INSUMO */}
           {criandoInsumo && (
-            <div className="rounded-2xl border border-rose-light bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-rose-light bg-white p-4 sm:p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4 pb-2 border-b border-rose-light/50">
                 <h3 className="font-bold text-chocolate flex items-center gap-2">
                   <Boxes className="w-4 h-4 text-rose-pastel" />
@@ -864,16 +864,20 @@ export default function AdminInsumos({
 
           {/* TABELA DE INSUMOS */}
           <div className="overflow-hidden rounded-2xl border border-rose-light bg-white shadow-sm">
+            <div className="sm:hidden px-4 py-2 bg-cream/60 border-b border-rose-light/50 text-[11px] text-chocolate-muted flex items-center justify-between">
+              <span>← Deslize para ver todas as colunas →</span>
+              <span className="font-semibold">{insumosFiltrados.length} itens</span>
+            </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm min-w-[640px]">
                 <thead className="bg-cream text-left text-chocolate-muted border-b border-rose-light/60">
                   <tr>
-                    <th className="px-4 py-3 font-semibold">Insumo</th>
-                    <th className="px-4 py-3 font-semibold">Formato</th>
-                    <th className="px-4 py-3 font-semibold">Total Estoque</th>
-                    <th className="px-4 py-3 font-semibold">Preço Pago</th>
-                    <th className="px-4 py-3 font-semibold">Custo Base (Receitas)</th>
-                    <th className="px-4 py-3 font-semibold text-right">Ações</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Insumo</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Formato</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Total Estoque</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Preço Pago</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Custo Base (Receitas)</th>
+                    <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-rose-light/60">
@@ -921,9 +925,9 @@ export default function AdminInsumos({
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="relative flex-1 max-w-md">
-              <Search className="w-4 h-4 absolute left-3 top-2.5 text-chocolate-muted" />
+              <Search className="w-4 h-4 absolute left-3 top-3 text-chocolate-muted" />
               <input
                 type="text"
                 placeholder="Buscar produto base..."
@@ -935,7 +939,7 @@ export default function AdminInsumos({
 
             <button
               onClick={() => setCriandoBase((v) => !v)}
-              className="flex items-center gap-2 rounded-full bg-rose-pastel px-5 py-2.5 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors shadow-sm"
+              className="flex items-center justify-center gap-2 rounded-full bg-rose-pastel px-5 py-2.5 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors shadow-sm w-full sm:w-auto shrink-0"
             >
               <Plus className="w-4 h-4" />
               {criandoBase ? "Fechar formulário" : "Novo Produto Base"}
@@ -944,7 +948,7 @@ export default function AdminInsumos({
 
           {/* FORMULÁRIO DE NOVO ITEM BASE */}
           {criandoBase && (
-            <div className="rounded-2xl border border-rose-light bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-rose-light bg-white p-4 sm:p-6 shadow-sm">
               <h3 className="font-bold text-chocolate mb-4 pb-2 border-b border-rose-light/50 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-rose-pastel" />
                 Cadastrar Novo Produto / Item Base
@@ -959,15 +963,19 @@ export default function AdminInsumos({
 
           {/* TABELA DE ITENS BASE */}
           <div className="overflow-hidden rounded-2xl border border-rose-light bg-white shadow-sm">
+            <div className="sm:hidden px-4 py-2 bg-cream/60 border-b border-rose-light/50 text-[11px] text-chocolate-muted flex items-center justify-between">
+              <span>← Deslize para ver todas as colunas →</span>
+              <span className="font-semibold">{itensBaseFiltrados.length} itens</span>
+            </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm min-w-[580px]">
                 <thead className="bg-cream text-left text-chocolate-muted border-b border-rose-light/60">
                   <tr>
-                    <th className="px-4 py-3 font-semibold">Produto / Item Base</th>
-                    <th className="px-4 py-3 font-semibold">Medida Padrão</th>
-                    <th className="px-4 py-3 font-semibold">Medida Base do Sistema</th>
-                    <th className="px-4 py-3 font-semibold">Tipo</th>
-                    <th className="px-4 py-3 font-semibold text-right">Ações</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Produto / Item Base</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Medida Padrão</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Medida Base do Sistema</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo</th>
+                    <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-rose-light/60">
@@ -1172,9 +1180,11 @@ function InsumoBaseRow({
         <td className="px-4 py-3.5 text-chocolate font-medium">
           {item.quantidade_base.toLocaleString("pt-BR")} {sufixoBase}
         </td>
-        <td className="px-4 py-3.5 text-chocolate-muted flex items-center gap-1.5 pt-4">
-          <Icone className="w-4 h-4 text-chocolate-light" />
-          {item.tipo_medida}
+        <td className="px-4 py-3.5 text-chocolate-muted">
+          <div className="flex items-center gap-1.5">
+            <Icone className="w-4 h-4 text-chocolate-light shrink-0" />
+            <span>{item.tipo_medida}</span>
+          </div>
         </td>
         <td className="px-4 py-3.5 text-right">
           <div className="flex justify-end gap-2">

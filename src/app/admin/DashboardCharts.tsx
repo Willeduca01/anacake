@@ -36,7 +36,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-rose-light bg-white p-5">
+    <div className="rounded-2xl border border-rose-light bg-white p-4 sm:p-5 min-w-0">
       <h3 className="mb-4 text-sm font-semibold text-chocolate">{titulo}</h3>
       {children}
     </div>

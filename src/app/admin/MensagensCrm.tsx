@@ -128,11 +128,11 @@ export default function MensagensCrm({
         WhatsApp virá na próxima etapa.
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1 scrollbar-none">
         <button
           type="button"
           onClick={() => setFilaAtiva("todas")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+          className={`rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap shrink-0 transition-colors ${
             filaAtiva === "todas"
               ? "bg-rose-pastel text-white"
               : "border border-rose-light bg-white text-chocolate-muted hover:bg-rose-light"
@@ -146,7 +146,7 @@ export default function MensagensCrm({
             type="button"
             onClick={() => setFilaAtiva(fila.id)}
             title={fila.descricao}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+            className={`rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap shrink-0 transition-colors ${
               filaAtiva === fila.id
                 ? "bg-rose-pastel text-white"
                 : "border border-rose-light bg-white text-chocolate-muted hover:bg-rose-light"
