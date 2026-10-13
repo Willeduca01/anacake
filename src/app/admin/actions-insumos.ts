@@ -10,8 +10,10 @@ import {
   criarInsumoBase,
   atualizarInsumoBase,
   excluirInsumoBase,
+  registrarCompraInsumo,
   type InsumoInput,
   type InsumoBaseInput,
+  type InsumoCompraInput,
   type TipoMedida,
   type FormatoCompra,
 } from "@/lib/insumos";
@@ -60,6 +62,17 @@ function parseInsumo(formData: FormData): InsumoInput {
     throw new Error("Preço inválido.");
   }
 
+  const estoqueAtualRaw = formData.get("estoque_atual");
+  const estoqueMinimoRaw = formData.get("estoque_minimo");
+  const estoqueAtual =
+    estoqueAtualRaw !== null && estoqueAtualRaw !== ""
+      ? Number(estoqueAtualRaw)
+      : undefined;
+  const estoqueMinimo =
+    estoqueMinimoRaw !== null && estoqueMinimoRaw !== ""
+      ? Number(estoqueMinimoRaw)
+      : undefined;
+
   return {
     insumo_base_id: insumoBaseIdRaw || null,
     nome,
@@ -69,6 +82,8 @@ function parseInsumo(formData: FormData): InsumoInput {
     peso_unitario: pesoUnitario,
     quantidade_embalagem: unidades * pesoUnitario,
     preco_embalagem: precoTotal,
+    estoque_atual: estoqueAtual,
+    estoque_minimo: estoqueMinimo,
   };
 }
 
@@ -145,4 +160,41 @@ export async function excluirInsumoAction(formData: FormData) {
   await excluirInsumo(id);
   revalidatePath("/admin");
   revalidatePath("/admin/insumos");
+}
+
+/* ==========================================================
+   ACTIONS - COMPRAS DE INSUMOS
+   ========================================================== */
+
+export async function registrarCompraInsumoAction(formData: FormData) {
+  await exigirSessaoAdmin();
+  const insumoId = String(formData.get("insumo_id") ?? "").trim();
+  const quantidade = Number(formData.get("quantidade"));
+  const precoTotal = Number(formData.get("preco_total"));
+  const estabelecimento = sanitizarTexto(String(formData.get("estabelecimento") ?? "")).trim();
+  const dataCompra = String(formData.get("data_compra") ?? "").trim();
+  const observacoes = sanitizarTexto(String(formData.get("observacoes") ?? "")).trim();
+
+  if (!insumoId) throw new Error("Insumo é obrigatório.");
+  if (Number.isNaN(quantidade) || quantidade <= 0) {
+    throw new Error("Quantidade comprada deve ser maior que zero.");
+  }
+  if (Number.isNaN(precoTotal) || precoTotal <= 0) {
+    throw new Error("Preço total deve ser maior que zero.");
+  }
+
+  const input: InsumoCompraInput = {
+    insumo_id: insumoId,
+    quantidade,
+    preco_total: precoTotal,
+    estabelecimento: estabelecimento || null,
+    data_compra: dataCompra ? new Date(dataCompra).toISOString() : null,
+    observacoes: observacoes || null,
+  };
+
+  await registrarCompraInsumo(input);
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/insumos");
+  revalidatePath("/admin/receitas");
 }

@@ -8,8 +8,16 @@ import {
   criarInsumoBaseAction,
   atualizarInsumoBaseAction,
   excluirInsumoBaseAction,
+  registrarCompraInsumoAction,
 } from "@/app/admin/actions-insumos";
-import type { Insumo, InsumoBase, TipoMedida, FormatoCompra } from "@/lib/insumos";
+import type {
+  Insumo,
+  InsumoBase,
+  InsumoCompra,
+  TipoMedida,
+  FormatoCompra,
+} from "@/lib/insumos";
+import { GraficoHistoricoPrecosInsumo } from "@/app/admin/DashboardCharts";
 import {
   Package,
   Scale,
@@ -23,6 +31,10 @@ import {
   ChevronDown,
   Check,
   X,
+  ShoppingCart,
+  AlertTriangle,
+  Store,
+  TrendingUp,
 } from "lucide-react";
 
 const inputClass =
@@ -666,6 +678,39 @@ function InsumoForm({
             </div>
           </>
         )}
+
+        {/* ESTOQUE ATUAL E ESTOQUE MÍNIMO */}
+        <div>
+          <label className={labelClass}>Estoque Inicial / Atual (unidades)</label>
+          <input
+            name="estoque_atual"
+            type="number"
+            step="1"
+            min="0"
+            defaultValue={insumo?.estoque_atual ?? 0}
+            className={inputClass}
+            placeholder="Ex: 10"
+          />
+          <span className="text-[11px] text-chocolate-muted mt-0.5 block">
+            Quantidade de embalagens disponíveis no momento.
+          </span>
+        </div>
+
+        <div>
+          <label className={labelClass}>Estoque Mínimo para Alerta (unidades)</label>
+          <input
+            name="estoque_minimo"
+            type="number"
+            step="1"
+            min="0"
+            defaultValue={insumo?.estoque_minimo ?? 5}
+            className={inputClass}
+            placeholder="Ex: 5"
+          />
+          <span className="text-[11px] text-chocolate-muted mt-0.5 block">
+            Avisa no dashboard quando atingir ou ficar abaixo deste número.
+          </span>
+        </div>
       </div>
 
       {/* CARD DE RESUMO DO CÁLCULO EM TEMPO REAL */}
@@ -733,17 +778,279 @@ function InsumoForm({
 }
 
 /* ==========================================================
+   MODAL DE REGISTRO DE COMPRA DE INSUMOS
+   ========================================================== */
+
+function ModalRegistrarCompra({
+  insumos,
+  insumoInicialId,
+  aberto,
+  onFechar,
+}: {
+  insumos: Insumo[];
+  insumoInicialId?: string | null;
+  aberto: boolean;
+  onFechar: () => void;
+}) {
+  const [insumoId, setInsumoId] = useState(
+    insumoInicialId || (insumos[0]?.id ?? "")
+  );
+  const [quantidade, setQuantidade] = useState<number | "">(1);
+  const [precoTotal, setPrecoTotal] = useState<number | "">("");
+  const [estabelecimento, setEstabelecimento] = useState("");
+  const [dataCompra, setDataCompra] = useState(() => {
+    const d = new Date();
+    return d.toISOString().slice(0, 10);
+  });
+  const [observacoes, setObservacoes] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  if (!aberto) return null;
+
+  const insumoSelecionado = insumos.find((i) => i.id === insumoId);
+  const qtdNum = Number(quantidade) || 0;
+  const precoTotalNum = Number(precoTotal) || 0;
+  const precoUnitarioCalculado =
+    qtdNum > 0 && precoTotalNum > 0 ? precoTotalNum / qtdNum : 0;
+  const novoEstoqueEstimado = insumoSelecionado
+    ? Number(insumoSelecionado.estoque_atual || 0) + qtdNum
+    : qtdNum;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErro(null);
+
+    if (!insumoId) {
+      setErro("Selecione um insumo.");
+      return;
+    }
+    if (!qtdNum || qtdNum <= 0) {
+      setErro("A quantidade comprada deve ser maior que zero.");
+      return;
+    }
+    if (!precoTotalNum || precoTotalNum <= 0) {
+      setErro("O preço total deve ser maior que zero.");
+      return;
+    }
+
+    setEnviando(true);
+    try {
+      const fd = new FormData();
+      fd.set("insumo_id", insumoId);
+      fd.set("quantidade", String(qtdNum));
+      fd.set("preco_total", String(precoTotalNum));
+      if (estabelecimento.trim()) fd.set("estabelecimento", estabelecimento.trim());
+      if (dataCompra) fd.set("data_compra", dataCompra);
+      if (observacoes.trim()) fd.set("observacoes", observacoes.trim());
+
+      await registrarCompraInsumoAction(fd);
+      onFechar();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : "Erro ao registrar compra.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-chocolate/40 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="relative w-full max-w-lg rounded-2xl border border-rose-light bg-white p-5 sm:p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
+        <div className="flex items-center justify-between border-b border-rose-light/60 pb-3 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-cream text-rose-pastel border border-rose-light">
+              <ShoppingCart className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-chocolate text-base sm:text-lg">
+                Registrar Compra de Insumo
+              </h3>
+              <p className="text-xs text-chocolate-muted">
+                Repõe o estoque e recalcula o custo unitário automaticamente
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onFechar}
+            className="p-1.5 rounded-lg text-chocolate-muted hover:text-chocolate hover:bg-cream transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {erro && (
+          <div className="mb-4 rounded-xl border border-badge-red bg-rose-50 p-3 text-xs text-badge-red-text font-medium">
+            {erro}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* SELEÇÃO DO INSUMO */}
+          <div>
+            <label className={labelClass}>Insumo Comprado</label>
+            <select
+              value={insumoId}
+              onChange={(e) => setInsumoId(e.target.value)}
+              required
+              className={inputClass}
+            >
+              {insumos.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.nome} (Estoque atual: {i.estoque_atual} un — Atual: {formatarMoeda(i.preco_embalagem)})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* QUANTIDADE COMPRADA */}
+            <div>
+              <label className={labelClass}>Quantidade Comprada (embalagens/un)</label>
+              <input
+                type="number"
+                min="0.1"
+                step="any"
+                required
+                value={quantidade}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setQuantidade(val === "" ? "" : parseFloat(val));
+                }}
+                placeholder="Ex: 5 ou 12"
+                className={inputClass}
+              />
+            </div>
+
+            {/* PREÇO TOTAL PAGO */}
+            <div>
+              <label className={labelClass}>Preço Total Pago (R$)</label>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                required
+                value={precoTotal}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPrecoTotal(val === "" ? "" : parseFloat(val));
+                }}
+                placeholder="Ex: 45.90"
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          {/* CARD RESUMO DA COMPRA */}
+          <div className="rounded-xl border border-rose-light bg-cream/50 p-3 text-xs space-y-1.5">
+            <div className="flex justify-between items-center text-chocolate font-medium">
+              <span>Custo Unitário Desta Compra:</span>
+              <strong className="text-sm font-bold text-chocolate">
+                {precoUnitarioCalculado > 0 ? formatarMoeda(precoUnitarioCalculado) : "R$ 0,00"} / un
+              </strong>
+            </div>
+            <div className="flex justify-between items-center text-chocolate-muted">
+              <span>Novo estoque estimado:</span>
+              <span className="font-semibold text-chocolate">
+                {novoEstoqueEstimado} un (+{qtdNum} un)
+              </span>
+            </div>
+            <p className="text-[11px] text-chocolate-muted pt-1 border-t border-rose-light/40">
+              💡 O sistema registrará este gasto como saída operacional no dashboard e ajustará o custo base das fichas técnicas por média ponderada.
+            </p>
+          </div>
+
+          {/* ESTABELECIMENTO / FORNECEDOR */}
+          <div>
+            <label className={labelClass}>Fornecedor / Estabelecimento (opcional)</label>
+            <div className="relative">
+              <Store className="w-4 h-4 absolute left-3 top-3 text-chocolate-muted pointer-events-none" />
+              <input
+                type="text"
+                value={estabelecimento}
+                onChange={(e) => setEstabelecimento(e.target.value)}
+                placeholder="Ex: Atacadão, Sam's Club, Assaí, Mercado Livre..."
+                className={`${inputClass} pl-9`}
+              />
+            </div>
+          </div>
+
+          {/* DATA DA COMPRA */}
+          <div>
+            <label className={labelClass}>Data da Compra</label>
+            <input
+              type="date"
+              value={dataCompra}
+              onChange={(e) => setDataCompra(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+
+          {/* OBSERVAÇÕES */}
+          <div>
+            <label className={labelClass}>Observações (opcional)</label>
+            <textarea
+              rows={2}
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              placeholder="Ex: Promoção relâmpago, fardo fechado..."
+              className={inputClass}
+            />
+          </div>
+
+          <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2 border-t border-rose-light/50">
+            <button
+              type="button"
+              onClick={onFechar}
+              disabled={enviando}
+              className="w-full sm:w-1/2 rounded-full border border-rose-light px-4 py-2.5 text-xs font-semibold text-chocolate-muted hover:bg-cream transition-colors text-center"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={enviando}
+              className="w-full sm:w-1/2 rounded-full bg-rose-pastel px-4 py-2.5 text-xs font-semibold text-white hover:bg-chocolate-light transition-colors disabled:opacity-60 shadow-sm text-center"
+            >
+              {enviando ? "Registrando Entrada…" : "Confirmar Compra"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ==========================================================
    COMPONENTE PRINCIPAL: ADMIN INSUMOS
    ========================================================== */
 
 export default function AdminInsumos({
   insumos,
   insumosBase,
+  compras = [],
+  historicoPrecos = [],
 }: {
   insumos: Insumo[];
   insumosBase: InsumoBase[];
+  compras?: InsumoCompra[];
+  historicoPrecos?: {
+    insumo_id: string;
+    insumo_nome: string;
+    data_compra: string;
+    preco_unitario: number;
+    preco_total: number;
+    quantidade: number;
+    estabelecimento: string | null;
+  }[];
 }) {
-  const [abaAtiva, setAbaAtiva] = useState<"estoque" | "produtos_base">("estoque");
+  const [abaAtiva, setAbaAtiva] = useState<"estoque" | "compras" | "produtos_base">("estoque");
+
+  // Estados de compras
+  const [modalCompraAberto, setModalCompraAberto] = useState(false);
+  const [insumoParaComprar, setInsumoParaComprar] = useState<string | null>(null);
+  const [filtroInsumoGrafico, setFiltroInsumoGrafico] = useState<string>("TODOS");
+  const [buscaCompras, setBuscaCompras] = useState("");
 
   // Estados da Aba 1 (Estoque)
   const [criandoInsumo, setCriandoInsumo] = useState(false);
@@ -751,7 +1058,7 @@ export default function AdminInsumos({
   const [buscaInsumo, setBuscaInsumo] = useState("");
   const [filtroMedida, setFiltroMedida] = useState<string>("TODOS");
 
-  // Estados da Aba 2 (Produtos Base)
+  // Estados da Aba 3 (Produtos Base)
   const [criandoBase, setCriandoBase] = useState(false);
   const [editandoBaseId, setEditandoBaseId] = useState<string | null>(null);
   const [buscaBase, setBuscaBase] = useState("");
@@ -774,6 +1081,25 @@ export default function AdminInsumos({
       normalizarTexto(b.nome).includes(termo)
     );
   }, [insumosBase, buscaBase]);
+
+  // Compras filtradas
+  const comprasFiltradas = useMemo(() => {
+    const termo = normalizarTexto(buscaCompras);
+    if (!termo) return compras;
+    return compras.filter((c) => {
+      const matchNome = c.insumo_nome && normalizarTexto(c.insumo_nome).includes(termo);
+      const matchEstab = c.estabelecimento && normalizarTexto(c.estabelecimento).includes(termo);
+      return matchNome || matchEstab;
+    });
+  }, [compras, buscaCompras]);
+
+  // Dados do gráfico de preços filtrados
+  const dadosGraficoPrecos = useMemo(() => {
+    if (filtroInsumoGrafico === "TODOS") {
+      return historicoPrecos;
+    }
+    return historicoPrecos.filter((h) => h.insumo_id === filtroInsumoGrafico);
+  }, [historicoPrecos, filtroInsumoGrafico]);
 
   return (
     <div className="space-y-6">
@@ -807,6 +1133,27 @@ export default function AdminInsumos({
               }`}
             >
               {insumos.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setAbaAtiva("compras")}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-full px-3.5 sm:px-4 py-2 text-xs font-semibold whitespace-nowrap transition-all ${
+              abaAtiva === "compras"
+                ? "bg-rose-pastel text-white shadow-sm"
+                : "text-chocolate-muted hover:text-chocolate"
+            }`}
+          >
+            <ShoppingCart className="w-4 h-4 shrink-0" />
+            <span>Histórico de Compras</span>
+            <span
+              className={`rounded-full px-1.5 py-0.5 text-[11px] ${
+                abaAtiva === "compras"
+                  ? "bg-white/20 text-white"
+                  : "bg-rose-light text-chocolate-muted"
+              }`}
+            >
+              {compras.length}
             </span>
           </button>
 
@@ -863,13 +1210,27 @@ export default function AdminInsumos({
               </select>
             </div>
 
-            <button
-              onClick={() => setCriandoInsumo((v) => !v)}
-              className="flex items-center justify-center gap-2 rounded-full bg-rose-pastel px-5 py-2.5 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors shadow-sm w-full sm:w-auto shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              {criandoInsumo ? "Fechar formulário" : "Novo insumo (Estoque)"}
-            </button>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setInsumoParaComprar(null);
+                  setModalCompraAberto(true);
+                }}
+                className="flex items-center justify-center gap-2 rounded-full bg-cream border border-rose-light px-4 py-2.5 text-xs sm:text-sm font-semibold text-chocolate hover:bg-rose-pastel hover:text-white transition-colors shadow-xs"
+              >
+                <ShoppingCart className="w-4 h-4 text-rose-pastel" />
+                Repor Estoque / Compra
+              </button>
+
+              <button
+                onClick={() => setCriandoInsumo((v) => !v)}
+                className="flex items-center justify-center gap-2 rounded-full bg-rose-pastel px-5 py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-chocolate-light transition-colors shadow-sm shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                {criandoInsumo ? "Fechar formulário" : "Novo insumo (Estoque)"}
+              </button>
+            </div>
           </div>
 
           {/* FORMULÁRIO DE NOVO INSUMO */}
@@ -897,12 +1258,13 @@ export default function AdminInsumos({
               <span className="font-semibold">{insumosFiltrados.length} itens</span>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[640px]">
+              <table className="w-full text-sm min-w-[720px]">
                 <thead className="bg-cream text-left text-chocolate-muted border-b border-rose-light/60">
                   <tr>
                     <th className="px-4 py-3 font-semibold whitespace-nowrap">Insumo</th>
                     <th className="px-4 py-3 font-semibold whitespace-nowrap">Formato</th>
-                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Total Estoque</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Embalagem</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Estoque Atual</th>
                     <th className="px-4 py-3 font-semibold whitespace-nowrap">Preço Pago</th>
                     <th className="px-4 py-3 font-semibold whitespace-nowrap">Custo Base (Receitas)</th>
                     <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Ações</th>
@@ -912,7 +1274,7 @@ export default function AdminInsumos({
                   {insumosFiltrados.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="px-4 py-12 text-center text-chocolate-muted"
                       >
                         Nenhum insumo encontrado.
@@ -927,11 +1289,176 @@ export default function AdminInsumos({
                         editando={editandoInsumoId === insumo.id}
                         onEditar={() => setEditandoInsumoId(insumo.id)}
                         onCancelar={() => setEditandoInsumoId(null)}
+                        onComprar={() => {
+                          setInsumoParaComprar(insumo.id);
+                          setModalCompraAberto(true);
+                        }}
                       />
                     ))
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          CONTEÚDO DA ABA 2: HISTÓRICO DE COMPRAS & PREÇOS
+          ======================================================== */}
+      {abaAtiva === "compras" && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-chocolate flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5 text-rose-pastel" />
+                Histórico de Compras de Insumos & Flutuação de Custos
+              </h3>
+              <p className="text-xs text-chocolate-muted mt-0.5">
+                Rastreie fornecedores, variações no preço unitário e entradas no fluxo financeiro
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setInsumoParaComprar(null);
+                setModalCompraAberto(true);
+              }}
+              className="flex items-center justify-center gap-2 rounded-full bg-rose-pastel px-5 py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-chocolate-light transition-colors shadow-sm w-full sm:w-auto shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              Registrar Compra de Insumo
+            </button>
+          </div>
+
+          {/* CARD COM GRÁFICO DE FLUTUAÇÃO DE PREÇOS */}
+          <div className="rounded-2xl border border-rose-light bg-white p-4 sm:p-5 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-rose-light/50">
+              <div>
+                <h4 className="text-sm font-bold text-chocolate flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-rose-pastel" />
+                  Evolução do Preço Unitário de Insumos
+                </h4>
+                <p className="text-xs text-chocolate-muted mt-0.5">
+                  Acompanhe a variação do custo pago ao longo do tempo por mercado/fornecedor
+                </p>
+              </div>
+
+              {/* FILTRO POR INSUMO ESPECÍFICO */}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-semibold text-chocolate">Filtrar Insumo:</span>
+                <select
+                  value={filtroInsumoGrafico}
+                  onChange={(e) => setFiltroInsumoGrafico(e.target.value)}
+                  className={`${inputClass} text-xs py-1.5 w-auto`}
+                >
+                  <option value="TODOS">Todos os Insumos Registrados</option>
+                  {insumos.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <GraficoHistoricoPrecosInsumo dados={dadosGraficoPrecos} />
+          </div>
+
+          {/* TABELA DE COMPRAS REALIZADAS */}
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 absolute left-3 top-3 text-chocolate-muted" />
+                <input
+                  type="text"
+                  placeholder="Buscar compra por insumo ou fornecedor..."
+                  value={buscaCompras}
+                  onChange={(e) => setBuscaCompras(e.target.value)}
+                  className={`${inputClass} pl-9`}
+                />
+              </div>
+
+              <span className="text-xs font-semibold text-chocolate-muted">
+                {comprasFiltradas.length}{" "}
+                {comprasFiltradas.length === 1
+                  ? "compra registrada"
+                  : "compras registradas"}
+              </span>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-rose-light bg-white shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[720px]">
+                  <thead className="bg-cream text-left text-chocolate-muted border-b border-rose-light/60">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold whitespace-nowrap">Data</th>
+                      <th className="px-4 py-3 font-semibold whitespace-nowrap">Insumo</th>
+                      <th className="px-4 py-3 font-semibold whitespace-nowrap">Qtd. Comprada</th>
+                      <th className="px-4 py-3 font-semibold whitespace-nowrap">Preço Unitário</th>
+                      <th className="px-4 py-3 font-semibold whitespace-nowrap">Valor Total</th>
+                      <th className="px-4 py-3 font-semibold whitespace-nowrap">Fornecedor / Mercado</th>
+                      <th className="px-4 py-3 font-semibold whitespace-nowrap">Obs</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-rose-light/60">
+                    {comprasFiltradas.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="px-4 py-12 text-center text-chocolate-muted"
+                        >
+                          Nenhuma compra de insumo encontrada. Clique em &quot;Registrar Compra de Insumo&quot; para registrar gastos e repor estoque!
+                        </td>
+                      </tr>
+                    ) : (
+                      comprasFiltradas.map((compra) => (
+                        <tr
+                          key={compra.id}
+                          className="hover:bg-cream/20 transition-colors"
+                        >
+                          <td className="px-4 py-3 text-chocolate whitespace-nowrap font-medium">
+                            {compra.data_compra.slice(8, 10)}/
+                            {compra.data_compra.slice(5, 7)}/
+                            {compra.data_compra.slice(0, 4)}
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-chocolate">
+                            {compra.insumo_nome || "Insumo"}
+                          </td>
+                          <td className="px-4 py-3 text-chocolate whitespace-nowrap font-medium">
+                            {compra.quantidade} un
+                          </td>
+                          <td className="px-4 py-3 text-chocolate whitespace-nowrap font-medium">
+                            {formatarMoeda(compra.preco_unitario)} / un
+                          </td>
+                          <td className="px-4 py-3 text-rose-700 font-bold whitespace-nowrap">
+                            {formatarMoeda(compra.preco_total)}
+                          </td>
+                          <td className="px-4 py-3 text-chocolate">
+                            {compra.estabelecimento ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-chocolate bg-cream px-2 py-0.5 rounded-md border border-rose-light/60">
+                                <Store className="w-3 h-3 text-rose-pastel" />
+                                {compra.estabelecimento}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-chocolate-muted italic">
+                                Não informado
+                              </span>
+                            )}
+                          </td>
+                          <td
+                            className="px-4 py-3 text-xs text-chocolate-muted max-w-[200px] truncate"
+                            title={compra.observacoes || ""}
+                          >
+                            {compra.observacoes || "—"}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -1033,6 +1560,18 @@ export default function AdminInsumos({
           </div>
         </div>
       )}
+
+      {/* MODAL PARA REGISTRAR COMPRA / REPOR ESTOQUE */}
+      <ModalRegistrarCompra
+        key={`${insumoParaComprar ?? "novo"}-${modalCompraAberto ? "aberto" : "fechado"}`}
+        insumos={insumos}
+        insumoInicialId={insumoParaComprar}
+        aberto={modalCompraAberto}
+        onFechar={() => {
+          setModalCompraAberto(false);
+          setInsumoParaComprar(null);
+        }}
+      />
     </div>
   );
 }
@@ -1047,12 +1586,14 @@ function InsumoRow({
   editando,
   onEditar,
   onCancelar,
+  onComprar,
 }: {
   insumo: Insumo;
   insumosBase: InsumoBase[];
   editando: boolean;
   onEditar: () => void;
   onCancelar: () => void;
+  onComprar?: () => void;
 }) {
   const sufixoBase =
     insumo.tipo_medida === "UNIDADE"
@@ -1062,6 +1603,8 @@ function InsumoRow({
       : "ml";
 
   const isPack = insumo.formato_compra === "PACK";
+  const estoqueBaixo =
+    Number(insumo.estoque_atual ?? 0) <= Number(insumo.estoque_minimo ?? 5);
 
   return (
     <>
@@ -1102,13 +1645,33 @@ function InsumoRow({
           )}
         </td>
 
+        {/* ESTOQUE ATUAL */}
+        <td className="px-4 py-3.5">
+          {estoqueBaixo ? (
+            <span
+              title={`Abaixo do mínimo (${insumo.estoque_minimo ?? 5} un)`}
+              className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 border border-rose-200"
+            >
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+              {insumo.estoque_atual ?? 0} un (Baixo)
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
+              <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              {insumo.estoque_atual ?? 0} un
+            </span>
+          )}
+        </td>
+
         <td className="px-4 py-3.5 text-chocolate">
           <span className="font-semibold">
             {formatarMoeda(insumo.preco_embalagem)}
           </span>
           {insumo.unidades_por_pack > 1 && (
             <span className="block text-[11px] text-chocolate-muted">
-              {formatarMoeda(insumo.preco_embalagem / (insumo.unidades_por_pack || 1))} / un
+              {formatarMoeda(
+                insumo.preco_embalagem / (insumo.unidades_por_pack || 1)
+              )} / un
             </span>
           )}
         </td>
@@ -1120,10 +1683,21 @@ function InsumoRow({
         </td>
 
         <td className="px-4 py-3.5 text-right">
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-1.5">
+            {onComprar && (
+              <button
+                type="button"
+                onClick={onComprar}
+                className="rounded-lg bg-cream border border-rose-light px-2.5 py-1.5 text-xs font-semibold text-chocolate hover:bg-rose-pastel hover:text-white transition-colors flex items-center gap-1"
+                title="Registrar nova compra para este insumo"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Repor
+              </button>
+            )}
             <button
               onClick={editando ? onCancelar : onEditar}
-              className="rounded-lg border border-rose-light px-3 py-1.5 text-xs font-medium text-chocolate hover:bg-rose-light transition-colors"
+              className="rounded-lg border border-rose-light px-2.5 py-1.5 text-xs font-medium text-chocolate hover:bg-rose-light transition-colors"
             >
               {editando ? "Fechar" : "Editar"}
             </button>
@@ -1138,7 +1712,7 @@ function InsumoRow({
               <input type="hidden" name="id" value={insumo.id} />
               <button
                 type="submit"
-                className="rounded-lg border border-badge-red px-3 py-1.5 text-xs font-medium text-badge-red-text hover:bg-badge-red transition-colors"
+                className="rounded-lg border border-badge-red px-2.5 py-1.5 text-xs font-medium text-badge-red-text hover:bg-badge-red transition-colors"
               >
                 Excluir
               </button>
@@ -1149,7 +1723,7 @@ function InsumoRow({
 
       {editando && (
         <tr className="bg-cream/40">
-          <td colSpan={6} className="px-4 py-5">
+          <td colSpan={7} className="px-4 py-5">
             <div className="rounded-xl border border-rose-light bg-white p-4">
               <h4 className="font-bold text-chocolate mb-3 text-sm">
                 Editar Insumo: {insumo.nome}

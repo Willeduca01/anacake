@@ -18,7 +18,12 @@ import {
   removerImagemProduto,
   type ProdutoInput,
 } from "@/lib/produtos";
-import { registrarVenda, EstoqueInsuficienteError } from "@/lib/vendas";
+import {
+  registrarVenda,
+  conciliarEstoqueVenda,
+  EstoqueInsuficienteError,
+  type TipoVenda,
+} from "@/lib/vendas";
 import {
   confirmarPedido,
   recusarPedido,
@@ -159,34 +164,85 @@ export async function registrarVendaAction(
   formData: FormData
 ): Promise<VendaFormState> {
   await exigirSessaoAdmin();
-  const produtoId = Number(formData.get("produto_id"));
+
+  const tipoVendaRaw = String(formData.get("tipo_venda") ?? "PADRAO");
+  const tipoVenda: TipoVenda = tipoVendaRaw === "AVULSA" ? "AVULSA" : "PADRAO";
+
+  const produtoIdRaw = formData.get("produto_id");
+  const produtoId = produtoIdRaw ? Number(produtoIdRaw) : null;
+
+  const descricaoAvulsa = sanitizarTexto(String(formData.get("descricao_avulsa") ?? "")).trim();
   const quantidade = Number(formData.get("quantidade"));
+  const valorTotalRaw = formData.get("valor_total");
+  const valorTotal = valorTotalRaw ? Number(valorTotalRaw) : null;
   const metodo = sanitizarTexto(String(formData.get("metodo_pagamento") ?? ""));
 
-  if (Number.isNaN(produtoId) || produtoId <= 0) {
-    return { ok: false, message: "Selecione um produto." };
-  }
+  const naoAbaterEstoque = formData.get("nao_abater_estoque") === "on";
+  const baixaEstoqueRealizada = tipoVenda === "AVULSA" ? !naoAbaterEstoque : true;
+
   if (Number.isNaN(quantidade) || quantidade <= 0) {
     return { ok: false, message: "Quantidade inválida." };
   }
 
+  if (tipoVenda === "PADRAO") {
+    if (!produtoId || Number.isNaN(produtoId) || produtoId <= 0) {
+      return { ok: false, message: "Selecione um produto do cardápio." };
+    }
+  } else {
+    if (!descricaoAvulsa && !produtoId) {
+      return {
+        ok: false,
+        message: "Informe a descrição do item avulso ou selecione um produto de referência.",
+      };
+    }
+    if (valorTotal === null || Number.isNaN(valorTotal) || valorTotal <= 0) {
+      return { ok: false, message: "Informe o valor total da venda avulsa." };
+    }
+  }
+
   try {
     await registrarVenda({
-      produto_id: produtoId,
+      produto_id: produtoId && produtoId > 0 ? produtoId : null,
+      descricao_avulsa: descricaoAvulsa || null,
       quantidade: Math.trunc(quantidade),
+      valor_total: valorTotal,
       metodo_pagamento: metodo || null,
+      tipo_venda: tipoVenda,
+      baixa_estoque_realizada: baixaEstoqueRealizada,
     });
   } catch (err) {
     if (err instanceof EstoqueInsuficienteError) {
       return { ok: false, message: err.message };
     }
-    return { ok: false, message: "Erro ao registrar a venda." };
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Erro ao registrar a venda.",
+    };
   }
 
   revalidatePath("/admin");
   revalidatePath("/admin/vendas");
   revalidatePath("/admin/produtos");
   return { ok: true, message: "Venda registrada com sucesso!" };
+}
+
+export async function conciliarEstoqueVendaAction(formData: FormData) {
+  await exigirSessaoAdmin();
+  const vendaId = Number(formData.get("venda_id"));
+  const produtoIdRaw = formData.get("produto_id");
+  const produtoId = produtoIdRaw ? Number(produtoIdRaw) : null;
+  const quantidadeRaw = formData.get("quantidade");
+  const quantidade = quantidadeRaw ? Number(quantidadeRaw) : null;
+
+  if (!vendaId || Number.isNaN(vendaId)) {
+    throw new Error("ID de venda inválido.");
+  }
+
+  await conciliarEstoqueVenda(vendaId, produtoId, quantidade);
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/vendas");
+  revalidatePath("/admin/produtos");
 }
 
 export type PedidoActionResult = { ok: boolean; message: string };
