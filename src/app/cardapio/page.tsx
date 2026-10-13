@@ -3,7 +3,13 @@ import CardapioClient from "@/components/CardapioClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function CardapioPage() {
+export default async function CardapioPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ categoria?: string }>;
+}) {
+  const resolvedParams = searchParams ? await searchParams : undefined;
+  const categoriaInicial = resolvedParams?.categoria;
   const produtos = await listarCardapioPublico();
 
   return (
@@ -26,7 +32,10 @@ export default async function CardapioPage() {
             Nenhum produto disponível no momento.
           </p>
         ) : (
-          <CardapioClient produtos={produtos} />
+          <CardapioClient
+            produtos={produtos}
+            categoriaInicial={categoriaInicial}
+          />
         )}
       </div>
     </section>

@@ -6,8 +6,10 @@ import {
   atualizarProdutoAction,
   excluirProdutoAction,
 } from "@/app/admin/actions";
+import { salvarPromocaoAction } from "@/app/admin/actions-promocao";
 import type { ProdutoAdmin } from "@/lib/produtos";
-import { Tag, X } from "lucide-react";
+import type { PromocaoConfig } from "@/types/promocao";
+import { Tag, X, Gift, Sparkles, ArrowRight, CheckCircle2 } from "lucide-react";
 
 const inputClass =
   "w-full rounded-lg border border-rose-light bg-warm-white px-3 py-2 text-sm text-chocolate focus:border-rose-pastel focus:outline-none focus:ring-2 focus:ring-rose-pastel/30";
@@ -333,12 +335,302 @@ function ProdutoForm({
   );
 }
 
+/* ==========================================================
+   SEÇÃO ESPECÍFICA: PROMOÇÃO EM ESPECÍFICO (BANNER SAZONAL)
+   ========================================================== */
+
+function SecaoPromocao({
+  promocaoInicial,
+  categorias,
+}: {
+  promocaoInicial?: PromocaoConfig;
+  categorias: string[];
+}) {
+  const [aberto, setAberto] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [mensagemSucesso, setMensagemSucesso] = useState("");
+  const [mensagemErro, setMensagemErro] = useState("");
+
+  const [titulo, setTitulo] = useState(
+    promocaoInicial?.titulo || "Coleção Especial de Dia das Mães"
+  );
+  const [subtitulo, setSubtitulo] = useState(
+    promocaoInicial?.subtitulo || "Novidade da Temporada"
+  );
+  const [descricao, setDescricao] = useState(
+    promocaoInicial?.descricao ||
+      "Kits exclusivos com brigadeiros, trufas e mini bolos decorados. Encomende até 5 de maio e ganhe uma caixa personalizada de presente."
+  );
+  const [categoria, setCategoria] = useState(
+    promocaoInicial?.categoria || "promocoes"
+  );
+  const [ativo, setAtivo] = useState(promocaoInicial?.ativo ?? true);
+
+  const [modoNovaCategoria, setModoNovaCategoria] = useState(false);
+  const [novaCategoria, setNovaCategoria] = useState("");
+
+  const categoriaFinal =
+    (modoNovaCategoria ? novaCategoria.trim() : categoria.trim()) || "promocoes";
+
+  const handleSalvar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSalvando(true);
+    setMensagemSucesso("");
+    setMensagemErro("");
+
+    const formData = new FormData();
+    formData.append("titulo", titulo);
+    formData.append("subtitulo", subtitulo);
+    formData.append("descricao", descricao);
+    formData.append("categoria", categoriaFinal);
+    formData.append("ativo", ativo ? "true" : "false");
+
+    try {
+      await salvarPromocaoAction(formData);
+      setMensagemSucesso("Promoção atualizada com sucesso no site!");
+      setTimeout(() => setMensagemSucesso(""), 4000);
+    } catch (err: unknown) {
+      setMensagemErro(
+        err instanceof Error ? err.message : "Erro ao salvar promoção."
+      );
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-rose-light bg-white shadow-sm overflow-hidden">
+      <div className="p-4 sm:p-5 flex items-center justify-between border-b border-rose-light/50 bg-cream/30">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-pastel to-chocolate-light flex items-center justify-center text-white shadow-xs shrink-0">
+            <Gift className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-bold text-chocolate text-base sm:text-lg">
+                Promoção em específico
+              </h3>
+              {ativo ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-badge-green px-2 py-0.5 text-[11px] font-bold text-badge-green-text border border-badge-green-text/20">
+                  Banner ativo no site
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-badge-red px-2 py-0.5 text-[11px] font-medium text-badge-red-text border border-badge-red-text/20">
+                  Banner pausado
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-chocolate-muted">
+              Configure as informações da promoção na página inicial e o direcionamento do botão &quot;Conferir&quot;.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setAberto((v) => !v)}
+          className="text-xs font-semibold text-chocolate-muted hover:text-chocolate px-3 py-1.5 rounded-lg border border-rose-light hover:bg-rose-light transition-colors shrink-0"
+        >
+          {aberto ? "Ocultar" : "Editar"}
+        </button>
+      </div>
+
+      {aberto && (
+        <form onSubmit={handleSalvar} className="p-4 sm:p-6 space-y-5">
+          {mensagemSucesso && (
+            <div className="rounded-xl bg-badge-green border border-badge-green-text/20 p-3 text-xs font-semibold text-badge-green-text flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{mensagemSucesso}</span>
+            </div>
+          )}
+
+          {mensagemErro && (
+            <div className="rounded-xl bg-badge-red border border-badge-red-text/30 p-3 text-xs font-semibold text-badge-red-text">
+              {mensagemErro}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Título da Promoção</label>
+              <input
+                required
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value)}
+                className={inputClass}
+                placeholder="Ex: Coleção Especial de Dia das Mães"
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Selo / Destaque</label>
+              <input
+                value={subtitulo}
+                onChange={(e) => setSubtitulo(e.target.value)}
+                className={inputClass}
+                placeholder="Ex: Novidade da Temporada"
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>
+                <span className="flex items-center justify-between">
+                  <span className="flex items-center gap-1 font-semibold text-chocolate">
+                    <Tag className="w-3.5 h-3.5 text-rose-pastel" />
+                    Categoria de Destino (Botão Conferir)
+                  </span>
+                  {!modoNovaCategoria && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModoNovaCategoria(true);
+                        setNovaCategoria("");
+                      }}
+                      className="text-[11px] font-medium text-rose-pastel hover:text-chocolate-light hover:underline"
+                    >
+                      + Nova
+                    </button>
+                  )}
+                </span>
+              </label>
+
+              {modoNovaCategoria ? (
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    autoFocus
+                    required
+                    value={novaCategoria}
+                    onChange={(e) => setNovaCategoria(e.target.value)}
+                    placeholder="Nome da categoria..."
+                    className={`${inputClass} pr-8`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModoNovaCategoria(false);
+                      setNovaCategoria("");
+                    }}
+                    title="Voltar para categorias existentes"
+                    className="absolute right-2 p-1 text-chocolate-muted hover:text-chocolate hover:bg-rose-light/50 rounded-full transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={categoria}
+                  onChange={(e) => {
+                    if (e.target.value === "__nova__") {
+                      setModoNovaCategoria(true);
+                      setNovaCategoria("");
+                    } else {
+                      setCategoria(e.target.value);
+                    }
+                  }}
+                  className={inputClass}
+                >
+                  {categorias.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                  <option value="__nova__">+ Outra categoria...</option>
+                </select>
+              )}
+              <p className="mt-1 text-[11px] text-chocolate-muted">
+                Ao clicar em &quot;Conferir&quot; na Home, os clientes verão todos os produtos cadastrados com a categoria <strong>{categoriaFinal}</strong>.
+              </p>
+            </div>
+
+            <div>
+              <label className={labelClass}>Status do Banner na Home</label>
+              <div className="h-10 flex items-center">
+                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-chocolate">
+                  <input
+                    type="checkbox"
+                    checked={ativo}
+                    onChange={(e) => setAtivo(e.target.checked)}
+                    className="h-4 w-4 rounded border-rose-light text-rose-pastel focus:ring-rose-pastel"
+                  />
+                  <span>Exibir banner promocional ativo na página inicial</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={labelClass}>Descrição da Promoção</label>
+              <textarea
+                rows={2}
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                className={inputClass}
+                placeholder="Ex: Kits exclusivos com brigadeiros, trufas e mini bolos decorados..."
+              />
+            </div>
+          </div>
+
+          {/* PRÉVIA VISUAL DO BANNER */}
+          <div className="space-y-2 pt-2">
+            <span className="text-[11px] font-bold text-chocolate-muted uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-rose-pastel" />
+              Prévia do Banner na Página Inicial
+            </span>
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-chocolate to-chocolate-light p-5 sm:p-6 text-white shadow-md">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="h-12 w-12 rounded-xl bg-rose-pastel/20 flex items-center justify-center shrink-0">
+                    <Gift className="h-6 w-6 text-rose-light" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-rose-pastel">
+                      {subtitulo || "Novidade da Temporada"}
+                    </span>
+                    <h4 className="text-lg font-bold text-white leading-tight">
+                      {titulo || "Título da Promoção"}
+                    </h4>
+                    <p className="text-xs text-cream-dark/80 mt-1 max-w-lg leading-relaxed line-clamp-2">
+                      {descricao || "Descrição da promoção..."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="shrink-0 flex flex-col items-start sm:items-end gap-1">
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-rose-pastel px-4 py-2 text-xs font-semibold text-white shadow-sm opacity-95">
+                    <span>Conferir</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[10px] text-cream/70">
+                    → Vai abrir: /cardapio?categoria={categoriaFinal}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={salvando}
+              className="rounded-full bg-rose-pastel px-6 py-2.5 text-sm font-bold text-white hover:bg-chocolate-light transition-colors disabled:opacity-60 shadow-sm"
+            >
+              {salvando ? "Salvando promoção…" : "Salvar Promoção"}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
 export default function AdminProdutos({
   produtos,
   categorias = ["doces", "sobremesas", "salgados"],
+  promocao,
 }: {
   produtos: ProdutoAdmin[];
   categorias?: string[];
+  promocao?: PromocaoConfig;
 }) {
   const [criando, setCriando] = useState(false);
   const [editandoId, setEditandoId] = useState<number | null>(null);
@@ -352,8 +644,11 @@ export default function AdminProdutos({
     produtos.forEach((p) => {
       if (p.categoria && p.categoria.trim()) set.add(p.categoria.trim());
     });
+    if (promocao?.categoria && promocao.categoria.trim()) {
+      set.add(promocao.categoria.trim());
+    }
     return Array.from(set);
-  }, [categorias, produtos]);
+  }, [categorias, produtos, promocao]);
 
   const produtosFiltrados = useMemo(() => {
     if (!filtroCategoria) return produtos;
@@ -364,6 +659,12 @@ export default function AdminProdutos({
 
   return (
     <div className="space-y-6">
+      {/* SEÇÃO ESPECÍFICA DA PROMOÇÃO */}
+      <SecaoPromocao
+        promocaoInicial={promocao}
+        categorias={todasCategoriasDisponiveis}
+      />
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-xl font-bold text-chocolate">

@@ -1,10 +1,21 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Gift, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { Gift, ArrowRight } from "lucide-react";
+import { type PromocaoConfig, PROMOCAO_PADRAO } from "@/types/promocao";
 
-export default function SeasonalBanner() {
+export default function SeasonalBanner({
+  promocao = PROMOCAO_PADRAO,
+}: {
+  promocao?: PromocaoConfig;
+}) {
+  if (!promocao.ativo) {
+    return null;
+  }
+
+  const categoriaDestino = promocao.categoria || "promocoes";
+
   return (
     <section className="py-16 sm:py-20 bg-warm-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -25,19 +36,20 @@ export default function SeasonalBanner() {
 
             <div className="flex-1">
               <span className="inline-block mb-2 text-xs font-semibold uppercase tracking-wider text-rose-pastel">
-                Novidade da Temporada
+                {promocao.subtitulo || "Novidade da Temporada"}
               </span>
               <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-                Coleção Especial de Dia das Mães
+                {promocao.titulo || "Promoção Especial"}
               </h2>
-              <p className="text-cream-dark/80 max-w-xl">
-                Kits exclusivos com brigadeiros, trufas e mini bolos decorados. Encomende até 5 de
-                maio e ganhe uma caixa personalizada de presente.
-              </p>
+              {promocao.descricao && (
+                <p className="text-cream-dark/80 max-w-xl">
+                  {promocao.descricao}
+                </p>
+              )}
             </div>
 
             <Link
-              href="/cardapio"
+              href={`/cardapio?categoria=${encodeURIComponent(categoriaDestino)}`}
               className="flex-shrink-0 inline-flex items-center gap-2 rounded-full bg-rose-pastel px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-black/20 hover:bg-rose-soft hover:text-chocolate transition-colors"
             >
               Conferir

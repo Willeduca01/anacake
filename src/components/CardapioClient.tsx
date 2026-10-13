@@ -9,15 +9,41 @@ import { sanitizarTexto } from "@/lib/sanitize";
 
 interface CardapioClientProps {
   produtos: Produto[];
+  categoriaInicial?: string;
 }
 
-export default function CardapioClient({ produtos }: CardapioClientProps) {
-  const [filtro, setFiltro] = useState("Todos");
-
+export default function CardapioClient({
+  produtos,
+  categoriaInicial,
+}: CardapioClientProps) {
   const categorias = useMemo(
     () => [...new Set(produtos.map((p) => sanitizarTexto(p.categoria) || "Outros"))],
     [produtos]
   );
+
+  const [filtro, setFiltro] = useState<string>(() => {
+    if (!categoriaInicial) return "Todos";
+    const sanitizado = sanitizarTexto(categoriaInicial).toLowerCase();
+    const encontrada = categorias.find(
+      (c) => sanitizarTexto(c).toLowerCase() === sanitizado
+    );
+    return encontrada || "Todos";
+  });
+
+  const [prevCategoriaInicial, setPrevCategoriaInicial] = useState(categoriaInicial);
+
+  if (categoriaInicial !== prevCategoriaInicial) {
+    setPrevCategoriaInicial(categoriaInicial);
+    if (categoriaInicial) {
+      const sanitizado = sanitizarTexto(categoriaInicial).toLowerCase();
+      const encontrada = categorias.find(
+        (c) => sanitizarTexto(c).toLowerCase() === sanitizado
+      );
+      setFiltro(encontrada || "Todos");
+    } else {
+      setFiltro("Todos");
+    }
+  }
 
   const filtroSanitizado = sanitizarTexto(filtro) || "Todos";
 
@@ -50,9 +76,17 @@ export default function CardapioClient({ produtos }: CardapioClientProps) {
       </AnimatePresence>
 
       {produtosFiltrados.length === 0 && (
-        <p className="text-center text-chocolate-muted mt-12">
-          Nenhum produto encontrado nesta categoria.
-        </p>
+        <div className="text-center text-chocolate-muted mt-12 space-y-2">
+          <p className="font-semibold text-chocolate">
+            Nenhum produto encontrado nesta categoria no momento.
+          </p>
+          <button
+            onClick={() => setFiltro("Todos")}
+            className="text-xs text-rose-pastel font-semibold hover:underline"
+          >
+            Ver todos os produtos do cardápio
+          </button>
+        </div>
       )}
     </>
   );

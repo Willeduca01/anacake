@@ -66,16 +66,18 @@ export async function listarCategorias(): Promise<string[]> {
          SELECT categoria FROM produtos WHERE categoria IS NOT NULL AND TRIM(categoria) != ''
          UNION
          SELECT categoria FROM receitas WHERE categoria IS NOT NULL AND TRIM(categoria) != ''
+         UNION
+         SELECT categoria FROM configuracoes_promocao WHERE categoria IS NOT NULL AND TRIM(categoria) != ''
        ) t
        ORDER BY categoria ASC`
     );
     const categoriasDoBanco = rows.map((r) => r.categoria).filter(Boolean);
-    const categoriasPadrao = ["doces", "sobremesas", "salgados"];
+    const categoriasPadrao = ["doces", "sobremesas", "salgados", "promocoes"];
     const todas = Array.from(new Set([...categoriasDoBanco, ...categoriasPadrao]));
     return todas;
   } catch (err) {
     console.error("Erro ao listar categorias:", err);
-    return ["doces", "sobremesas", "salgados"];
+    return ["doces", "sobremesas", "salgados", "promocoes"];
   }
 }
 
