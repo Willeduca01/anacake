@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useState, useMemo, type ChangeEvent } from "react";
 import {
   criarProdutoAction,
   atualizarProdutoAction,
   excluirProdutoAction,
 } from "@/app/admin/actions";
 import type { ProdutoAdmin } from "@/lib/produtos";
+import { Tag, X } from "lucide-react";
 
 const inputClass =
   "w-full rounded-lg border border-rose-light bg-warm-white px-3 py-2 text-sm text-chocolate focus:border-rose-pastel focus:outline-none focus:ring-2 focus:ring-rose-pastel/30";
@@ -54,11 +55,13 @@ function redimensionarImagem(file: File): Promise<Blob> {
 function ProdutoForm({
   produto,
   action,
+  categorias = ["doces", "sobremesas", "salgados"],
   onDone,
   submitLabel,
 }: {
   produto?: ProdutoAdmin;
   action: (formData: FormData) => Promise<void>;
+  categorias?: string[];
   onDone?: () => void;
   submitLabel: string;
 }) {
@@ -67,6 +70,26 @@ function ProdutoForm({
   const [remover, setRemover] = useState(false);
   const [erroImagem, setErroImagem] = useState("");
   const [enviando, setEnviando] = useState(false);
+
+  const opcoesCategorias = useMemo(() => {
+    const set = new Set<string>();
+    categorias.forEach((c) => {
+      if (c && c.trim()) set.add(c.trim());
+    });
+    if (produto?.categoria && produto.categoria.trim()) {
+      set.add(produto.categoria.trim());
+    }
+    return Array.from(set);
+  }, [categorias, produto]);
+
+  const [modoNovaCategoria, setModoNovaCategoria] = useState(false);
+  const [categoria, setCategoria] = useState<string>(() => {
+    if (produto?.categoria && produto.categoria.trim()) {
+      return produto.categoria.trim();
+    }
+    return opcoesCategorias[0] ?? "doces";
+  });
+  const [novaCategoria, setNovaCategoria] = useState("");
 
   const temImagemAtual = !!produto?.tem_imagem;
   const previewAtual =
@@ -144,12 +167,77 @@ function ProdutoForm({
       </div>
 
       <div>
-        <label className={labelClass}>Categoria</label>
+        <label className={labelClass}>
+          <span className="flex items-center justify-between">
+            <span className="flex items-center gap-1 font-semibold text-chocolate">
+              <Tag className="w-3.5 h-3.5 text-rose-pastel" />
+              Categoria
+            </span>
+            {!modoNovaCategoria && (
+              <button
+                type="button"
+                onClick={() => {
+                  setModoNovaCategoria(true);
+                  setNovaCategoria("");
+                }}
+                className="text-[11px] font-medium text-rose-pastel hover:text-chocolate-light hover:underline"
+              >
+                + Nova
+              </button>
+            )}
+          </span>
+        </label>
+
         <input
+          type="hidden"
           name="categoria"
-          defaultValue={produto?.categoria ?? ""}
-          className={inputClass}
+          value={(modoNovaCategoria ? novaCategoria.trim() : categoria.trim()) || "doces"}
         />
+
+        {modoNovaCategoria ? (
+          <div className="relative flex items-center">
+            <input
+              type="text"
+              autoFocus
+              required
+              value={novaCategoria}
+              onChange={(e) => setNovaCategoria(e.target.value)}
+              placeholder="Nome da categoria..."
+              className={`${inputClass} pr-8`}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setModoNovaCategoria(false);
+                setNovaCategoria("");
+              }}
+              title="Voltar para categorias existentes"
+              className="absolute right-2 p-1 text-chocolate-muted hover:text-chocolate hover:bg-rose-light/50 rounded-full transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <select
+            value={categoria}
+            onChange={(e) => {
+              if (e.target.value === "__nova__") {
+                setModoNovaCategoria(true);
+                setNovaCategoria("");
+              } else {
+                setCategoria(e.target.value);
+              }
+            }}
+            className={inputClass}
+          >
+            {opcoesCategorias.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+            <option value="__nova__">+ Outra categoria...</option>
+          </select>
+        )}
       </div>
 
       <div className="sm:col-span-2">
@@ -247,21 +335,58 @@ function ProdutoForm({
 
 export default function AdminProdutos({
   produtos,
+  categorias = ["doces", "sobremesas", "salgados"],
 }: {
   produtos: ProdutoAdmin[];
+  categorias?: string[];
 }) {
   const [criando, setCriando] = useState(false);
   const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [filtroCategoria, setFiltroCategoria] = useState("");
+
+  const todasCategoriasDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    categorias.forEach((c) => {
+      if (c && c.trim()) set.add(c.trim());
+    });
+    produtos.forEach((p) => {
+      if (p.categoria && p.categoria.trim()) set.add(p.categoria.trim());
+    });
+    return Array.from(set);
+  }, [categorias, produtos]);
+
+  const produtosFiltrados = useMemo(() => {
+    if (!filtroCategoria) return produtos;
+    return produtos.filter(
+      (p) => p.categoria && p.categoria.toLowerCase() === filtroCategoria.toLowerCase()
+    );
+  }, [produtos, filtroCategoria]);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h2 className="text-xl font-bold text-chocolate">
-          Produtos{" "}
-          <span className="text-sm font-normal text-chocolate-muted">
-            ({produtos.length})
-          </span>
-        </h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-xl font-bold text-chocolate">
+            Produtos{" "}
+            <span className="text-sm font-normal text-chocolate-muted">
+              ({produtosFiltrados.length})
+            </span>
+          </h2>
+
+          <select
+            value={filtroCategoria}
+            onChange={(e) => setFiltroCategoria(e.target.value)}
+            className="rounded-lg border border-rose-light bg-warm-white px-3 py-1.5 text-xs font-medium text-chocolate focus:border-rose-pastel focus:outline-none"
+          >
+            <option value="">Todas as categorias</option>
+            {todasCategoriasDisponiveis.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <button
           onClick={() => setCriando((v) => !v)}
           className="rounded-full bg-rose-pastel px-5 py-2.5 text-sm font-semibold text-white hover:bg-chocolate-light transition-colors w-full sm:w-auto text-center"
@@ -275,6 +400,7 @@ export default function AdminProdutos({
           <h3 className="mb-4 font-semibold text-chocolate">Novo produto</h3>
           <ProdutoForm
             action={criarProdutoAction}
+            categorias={todasCategoriasDisponiveis}
             submitLabel="Criar"
             onDone={() => setCriando(false)}
           />
@@ -284,7 +410,7 @@ export default function AdminProdutos({
       <div className="overflow-hidden rounded-2xl border border-rose-light bg-white shadow-sm">
         <div className="sm:hidden px-4 py-2 bg-cream/60 border-b border-rose-light/50 text-[11px] text-chocolate-muted flex items-center justify-between">
           <span>← Deslize para ver todas as colunas →</span>
-          <span className="font-semibold">{produtos.length} produtos</span>
+          <span className="font-semibold">{produtosFiltrados.length} produtos</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[560px]">
@@ -298,27 +424,28 @@ export default function AdminProdutos({
                 <th className="px-4 py-3 font-medium text-right whitespace-nowrap">Ações</th>
               </tr>
             </thead>
-          <tbody>
-            {produtos.length === 0 && (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="px-4 py-8 text-center text-chocolate-muted"
-                >
-                  Nenhum produto cadastrado.
-                </td>
-              </tr>
-            )}
-            {produtos.map((produto) => (
-              <FragmentRow
-                key={produto.id}
-                produto={produto}
-                editando={editandoId === produto.id}
-                onEditar={() => setEditandoId(produto.id)}
-                onCancelar={() => setEditandoId(null)}
-              />
-            ))}
-          </tbody>
+            <tbody>
+              {produtosFiltrados.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-chocolate-muted"
+                  >
+                    Nenhum produto cadastrado nesta categoria.
+                  </td>
+                </tr>
+              )}
+              {produtosFiltrados.map((produto) => (
+                <FragmentRow
+                  key={produto.id}
+                  produto={produto}
+                  categorias={todasCategoriasDisponiveis}
+                  editando={editandoId === produto.id}
+                  onEditar={() => setEditandoId(produto.id)}
+                  onCancelar={() => setEditandoId(null)}
+                />
+              ))}
+            </tbody>
           </table>
         </div>
       </div>
@@ -328,11 +455,13 @@ export default function AdminProdutos({
 
 function FragmentRow({
   produto,
+  categorias,
   editando,
   onEditar,
   onCancelar,
 }: {
   produto: ProdutoAdmin;
+  categorias?: string[];
   editando: boolean;
   onEditar: () => void;
   onCancelar: () => void;
@@ -341,8 +470,15 @@ function FragmentRow({
     <>
       <tr className="border-t border-rose-light/60">
         <td className="px-4 py-3 font-medium text-chocolate">{produto.nome}</td>
-        <td className="px-4 py-3 text-chocolate-muted">
-          {produto.categoria ?? "—"}
+        <td className="px-4 py-3">
+          {produto.categoria ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-rose-light/50 px-2.5 py-0.5 text-xs font-medium text-chocolate border border-rose-light">
+              <Tag className="w-3 h-3 text-rose-pastel" />
+              {produto.categoria}
+            </span>
+          ) : (
+            <span className="text-chocolate-muted text-xs">—</span>
+          )}
         </td>
         <td className="px-4 py-3 text-chocolate">
           {formatarPreco(produto.preco)}
@@ -389,6 +525,7 @@ function FragmentRow({
           <td colSpan={6} className="px-4 py-5">
             <ProdutoForm
               produto={produto}
+              categorias={categorias}
               action={atualizarProdutoAction}
               submitLabel="Salvar"
               onDone={onCancelar}
