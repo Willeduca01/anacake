@@ -1,5 +1,6 @@
 import { listarReceitas } from "@/lib/receitas";
 import { listarInsumos } from "@/lib/insumos";
+import { listarCategorias } from "@/lib/produtos";
 import AdminReceitas from "@/app/admin/AdminReceitas";
 
 export const dynamic = "force-dynamic";
@@ -10,10 +11,17 @@ export const metadata = {
 };
 
 export default async function ReceitasPage() {
-  const [receitas, insumos] = await Promise.all([
+  const [receitas, insumos, categorias] = await Promise.all([
     listarReceitas(),
     listarInsumos(),
+    listarCategorias(),
   ]);
 
-  return <AdminReceitas receitas={receitas} insumos={insumos} />;
+  return (
+    <AdminReceitas
+      receitas={receitas}
+      insumos={insumos}
+      categorias={categorias}
+    />
+  );
 }

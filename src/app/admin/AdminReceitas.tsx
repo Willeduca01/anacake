@@ -30,6 +30,7 @@ import {
   Globe,
   EyeOff,
   ShoppingBag,
+  Tag,
 } from "lucide-react";
 
 const inputClass =
@@ -237,14 +238,36 @@ interface ItemLinhaIngrediente {
 function ReceitaForm({
   receita,
   insumos,
+  categorias = ["doces", "sobremesas", "salgados"],
   onDone,
 }: {
   receita?: Receita;
   insumos: Insumo[];
+  categorias?: string[];
   onDone: () => void;
 }) {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  const opcoesCategorias = useMemo(() => {
+    const set = new Set<string>();
+    categorias.forEach((c) => {
+      if (c && c.trim()) set.add(c.trim());
+    });
+    if (receita?.categoria && receita.categoria.trim()) {
+      set.add(receita.categoria.trim());
+    }
+    return Array.from(set);
+  }, [categorias, receita]);
+
+  const [modoNovaCategoria, setModoNovaCategoria] = useState(false);
+  const [categoria, setCategoria] = useState<string>(() => {
+    if (receita?.categoria && receita.categoria.trim()) {
+      return receita.categoria.trim();
+    }
+    return opcoesCategorias[0] ?? "doces";
+  });
+  const [novaCategoria, setNovaCategoria] = useState("");
 
   const [nome, setNome] = useState(receita?.nome ?? "");
   const [rendimento, setRendimento] = useState<number | "">(
@@ -380,9 +403,13 @@ function ReceitaForm({
       return;
     }
 
+    const categoriaFinal =
+      (modoNovaCategoria ? novaCategoria.trim() : categoria.trim()) || "doces";
+
     const formData = new FormData();
     if (receita) formData.append("id", receita.id);
     formData.append("nome", nome);
+    formData.append("categoria", categoriaFinal);
     formData.append("rendimento", String(rendNum));
     formData.append("custo_embalagem", String(Number(custoEmbalagem) || 0));
     formData.append("taxa_custos_invisiveis", String(Number(taxaInvisiveis) || 0));
@@ -463,96 +490,168 @@ function ReceitaForm({
         </div>
 
         {/* CAMPOS DA RECEITA */}
-        <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
-            <label className={labelClass}>Nome da Receita / Doce</label>
-            <input
-              required
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              className={inputClass}
-              placeholder="Ex: Bolo de Cenoura com Brigadeiro Gourmet"
-            />
+        <div className="md:col-span-3 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="sm:col-span-2">
+              <label className={labelClass}>Nome da Receita / Doce</label>
+              <input
+                required
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                className={inputClass}
+                placeholder="Ex: Bolo de Cenoura com Brigadeiro Gourmet"
+              />
+            </div>
+
+            <div className="sm:col-span-1">
+              <label className={labelClass}>
+                <span className="flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Tag className="w-3.5 h-3.5 text-rose-pastel" />
+                    Categoria no Cardápio
+                  </span>
+                  {!modoNovaCategoria && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModoNovaCategoria(true);
+                        setNovaCategoria("");
+                      }}
+                      className="text-[11px] font-medium text-rose-pastel hover:text-chocolate-light hover:underline"
+                    >
+                      + Nova
+                    </button>
+                  )}
+                </span>
+              </label>
+
+              {modoNovaCategoria ? (
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    autoFocus
+                    required
+                    value={novaCategoria}
+                    onChange={(e) => setNovaCategoria(e.target.value)}
+                    placeholder="Nome da categoria..."
+                    className={`${inputClass} pr-8`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModoNovaCategoria(false);
+                      setNovaCategoria("");
+                    }}
+                    title="Voltar para categorias existentes"
+                    className="absolute right-2 p-1 text-chocolate-muted hover:text-chocolate hover:bg-rose-light/50 rounded-full transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={categoria}
+                  onChange={(e) => {
+                    if (e.target.value === "__nova__") {
+                      setModoNovaCategoria(true);
+                      setNovaCategoria("");
+                    } else {
+                      setCategoria(e.target.value);
+                    }
+                  }}
+                  className={inputClass}
+                >
+                  {opcoesCategorias.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                  <option value="__nova__">+ Outra categoria...</option>
+                </select>
+              )}
+            </div>
           </div>
 
-          <div>
-            <label className={labelClass}>Rendimento (Porções / Fatias / Doces)</label>
-            <input
-              type="number"
-              min="1"
-              step="1"
-              required
-              value={rendimento}
-              onChange={(e) => {
-                const val = e.target.value;
-                setRendimento(val === "" ? "" : parseInt(val));
-              }}
-              className={inputClass}
-              placeholder="Ex: 1 (bolo) ou 12 (fatias)"
-            />
-          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Rendimento (Porções / Fatias / Doces)</label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                required
+                value={rendimento}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setRendimento(val === "" ? "" : parseInt(val));
+                }}
+                className={inputClass}
+                placeholder="Ex: 1 (bolo) ou 12 (fatias)"
+              />
+            </div>
 
-          <div>
-            <label className={labelClass}>
-              <span className="flex items-center gap-1">
-                <Package className="w-3.5 h-3.5 text-chocolate-muted" />
-                Custo da Embalagem (R$)
-              </span>
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={custoEmbalagem}
-              onChange={(e) => {
-                const val = e.target.value;
-                setCustoEmbalagem(val === "" ? "" : parseFloat(val));
-              }}
-              className={inputClass}
-              placeholder="Ex: 3.50 (caixa, fita)"
-            />
-          </div>
+            <div>
+              <label className={labelClass}>
+                <span className="flex items-center gap-1">
+                  <Package className="w-3.5 h-3.5 text-chocolate-muted" />
+                  Custo da Embalagem (R$)
+                </span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={custoEmbalagem}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCustoEmbalagem(val === "" ? "" : parseFloat(val));
+                }}
+                className={inputClass}
+                placeholder="Ex: 3.50 (caixa, fita)"
+              />
+            </div>
 
-          <div>
-            <label className={labelClass}>
-              <span className="flex items-center gap-1">
-                <Flame className="w-3.5 h-3.5 text-amber-500" />
-                Custos Invisíveis: Gás/Luz (%)
-              </span>
-            </label>
-            <input
-              type="number"
-              step="1"
-              min="0"
-              value={taxaInvisiveis}
-              onChange={(e) => {
-                const val = e.target.value;
-                setTaxaInvisiveis(val === "" ? "" : parseFloat(val));
-              }}
-              className={inputClass}
-              placeholder="Ex: 20 (recomendado 20% a 25%)"
-            />
-          </div>
+            <div>
+              <label className={labelClass}>
+                <span className="flex items-center gap-1">
+                  <Flame className="w-3.5 h-3.5 text-amber-500" />
+                  Custos Invisíveis: Gás/Luz (%)
+                </span>
+              </label>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                value={taxaInvisiveis}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setTaxaInvisiveis(val === "" ? "" : parseFloat(val));
+                }}
+                className={inputClass}
+                placeholder="Ex: 20 (recomendado 20% a 25%)"
+              />
+            </div>
 
-          <div>
-            <label className={labelClass}>
-              <span className="flex items-center gap-1">
-                <Percent className="w-3.5 h-3.5 text-rose-pastel" />
-                Margem de Lucro Desejada (%)
-              </span>
-            </label>
-            <input
-              type="number"
-              step="1"
-              min="0"
-              value={margemLucro}
-              onChange={(e) => {
-                const val = e.target.value;
-                setMargemLucro(val === "" ? "" : parseFloat(val));
-              }}
-              className={inputClass}
-              placeholder="Ex: 150 (para 150% de lucro)"
-            />
+            <div>
+              <label className={labelClass}>
+                <span className="flex items-center gap-1">
+                  <Percent className="w-3.5 h-3.5 text-rose-pastel" />
+                  Margem de Lucro Desejada (%)
+                </span>
+              </label>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                value={margemLucro}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setMargemLucro(val === "" ? "" : parseFloat(val));
+                }}
+                className={inputClass}
+                placeholder="Ex: 150 (para 150% de lucro)"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -764,17 +863,35 @@ function ReceitaForm({
 function ModalPublicarReceita({
   receita,
   modo = "publicar",
+  categorias = ["doces", "sobremesas", "salgados"],
   onClose,
 }: {
   receita: Receita;
   modo?: "publicar" | "editar_loja";
+  categorias?: string[];
   onClose: () => void;
 }) {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  const opcoesCategorias = useMemo(() => {
+    const set = new Set<string>();
+    categorias.forEach((c) => {
+      if (c && c.trim()) set.add(c.trim());
+    });
+    if (receita.categoria && receita.categoria.trim()) {
+      set.add(receita.categoria.trim());
+    }
+    return Array.from(set);
+  }, [categorias, receita]);
+
+  const [modoNovaCategoria, setModoNovaCategoria] = useState(false);
+  const [categoria, setCategoria] = useState<string>(
+    receita.categoria || opcoesCategorias[0] || "doces"
+  );
+  const [novaCategoria, setNovaCategoria] = useState("");
+
   const [nome, setNome] = useState(receita.nome);
-  const [categoria, setCategoria] = useState(receita.categoria || "doces");
   const [descricao, setDescricao] = useState(receita.descricao || "");
 
   // Preço inicial: pode ser o total ou o por fatia dependendo do rendimento
@@ -840,10 +957,13 @@ function ModalPublicarReceita({
       return;
     }
 
+    const categoriaFinal =
+      (modoNovaCategoria ? novaCategoria.trim() : categoria.trim()) || "doces";
+
     const formData = new FormData();
     formData.append("receita_id", receita.id);
     formData.append("nome", nome);
-    formData.append("categoria", categoria);
+    formData.append("categoria", categoriaFinal);
     formData.append("descricao", descricao);
     formData.append("preco", String(precoNum));
     formData.append("estoque_atual", String(qtdNum));
@@ -980,16 +1100,67 @@ function ModalPublicarReceita({
               </div>
 
               <div>
-                <label className={labelClass}>Categoria na Loja</label>
-                <select
-                  value={categoria}
-                  onChange={(e) => setCategoria(e.target.value)}
-                  className={inputClass}
-                >
-                  <option value="doces">Doces & Bolos</option>
-                  <option value="sobremesas">Sobremesas</option>
-                  <option value="salgados">Salgados</option>
-                </select>
+                <label className={labelClass}>
+                  <span className="flex items-center justify-between">
+                    <span>Categoria na Loja</span>
+                    {!modoNovaCategoria && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModoNovaCategoria(true);
+                          setNovaCategoria("");
+                        }}
+                        className="text-[11px] font-medium text-rose-pastel hover:text-chocolate-light hover:underline"
+                      >
+                        + Nova
+                      </button>
+                    )}
+                  </span>
+                </label>
+                {modoNovaCategoria ? (
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      autoFocus
+                      required
+                      value={novaCategoria}
+                      onChange={(e) => setNovaCategoria(e.target.value)}
+                      placeholder="Nome da categoria..."
+                      className={`${inputClass} pr-8`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModoNovaCategoria(false);
+                        setNovaCategoria("");
+                      }}
+                      title="Voltar para categorias existentes"
+                      className="absolute right-2 p-1 text-chocolate-muted hover:text-chocolate hover:bg-rose-light/50 rounded-full transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={categoria}
+                    onChange={(e) => {
+                      if (e.target.value === "__nova__") {
+                        setModoNovaCategoria(true);
+                        setNovaCategoria("");
+                      } else {
+                        setCategoria(e.target.value);
+                      }
+                    }}
+                    className={inputClass}
+                  >
+                    {opcoesCategorias.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                    <option value="__nova__">+ Outra categoria...</option>
+                  </select>
+                )}
               </div>
             </div>
           </div>
@@ -1246,26 +1417,45 @@ function ModalPublicarReceita({
 export default function AdminReceitas({
   receitas,
   insumos,
+  categorias = ["doces", "sobremesas", "salgados"],
 }: {
   receitas: Receita[];
   insumos: Insumo[];
+  categorias?: string[];
 }) {
   const [criando, setCriando] = useState(false);
   const [editandoReceita, setEditandoReceita] = useState<Receita | null>(null);
   const [receitaPublicando, setReceitaPublicando] = useState<Receita | null>(null);
   const [modoPublicacao, setModoPublicacao] = useState<"publicar" | "editar_loja">("publicar");
   const [busca, setBusca] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
   const [expandidos, setExpandidos] = useState<Record<string, boolean>>({});
 
   const toggleExpandir = (id: string) => {
     setExpandidos((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const todasCategoriasDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    categorias.forEach((c) => {
+      if (c && c.trim()) set.add(c.trim());
+    });
+    receitas.forEach((r) => {
+      if (r.categoria && r.categoria.trim()) set.add(r.categoria.trim());
+    });
+    return Array.from(set);
+  }, [categorias, receitas]);
+
   const receitasFiltradas = useMemo(() => {
     const termo = normalizarTexto(busca);
-    if (!termo) return receitas;
-    return receitas.filter((r) => normalizarTexto(r.nome).includes(termo));
-  }, [receitas, busca]);
+    return receitas.filter((r) => {
+      const bateTermo = !termo || normalizarTexto(r.nome).includes(termo);
+      const bateCat =
+        !filtroCategoria ||
+        (r.categoria && r.categoria.toLowerCase() === filtroCategoria.toLowerCase());
+      return bateTermo && bateCat;
+    });
+  }, [receitas, busca, filtroCategoria]);
 
   return (
     <div className="space-y-6">
@@ -1303,6 +1493,7 @@ export default function AdminReceitas({
           <ReceitaForm
             receita={editandoReceita ?? undefined}
             insumos={insumos}
+            categorias={todasCategoriasDisponiveis}
             onDone={() => {
               setCriando(false);
               setEditandoReceita(null);
@@ -1316,23 +1507,42 @@ export default function AdminReceitas({
         <ModalPublicarReceita
           receita={receitaPublicando}
           modo={modoPublicacao}
+          categorias={todasCategoriasDisponiveis}
           onClose={() => setReceitaPublicando(null)}
         />
       )}
 
-      {/* BARRA DE PESQUISA */}
+      {/* BARRA DE PESQUISA & FILTRO POR CATEGORIA */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-chocolate-muted" />
-          <input
-            type="text"
-            placeholder="Pesquisar ficha técnica por nome..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            className={`${inputClass} pl-9`}
-          />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 max-w-2xl">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-chocolate-muted" />
+            <input
+              type="text"
+              placeholder="Pesquisar ficha técnica por nome..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className={`${inputClass} pl-9`}
+            />
+          </div>
+
+          <div className="w-full sm:w-52 shrink-0">
+            <select
+              value={filtroCategoria}
+              onChange={(e) => setFiltroCategoria(e.target.value)}
+              className={`${inputClass} text-xs font-medium`}
+            >
+              <option value="">Todas as categorias</option>
+              {todasCategoriasDisponiveis.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <span className="text-xs font-semibold text-chocolate-muted">
+
+        <span className="text-xs font-semibold text-chocolate-muted shrink-0">
           {receitasFiltradas.length} {receitasFiltradas.length === 1 ? "receita encontrada" : "receitas encontradas"}
         </span>
       </div>
@@ -1381,6 +1591,14 @@ export default function AdminReceitas({
                         <h3 className="text-lg sm:text-xl font-bold text-chocolate tracking-tight">
                           {r.nome}
                         </h3>
+
+                        {/* BADGE DA CATEGORIA */}
+                        {r.categoria && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-light/50 px-2.5 py-0.5 text-xs font-semibold text-chocolate-light border border-rose-light">
+                            <Tag className="w-3 h-3 text-rose-pastel" />
+                            {r.categoria}
+                          </span>
+                        )}
 
                         {/* BADGE DE PUBLICAÇÃO */}
                         {estaPublicado ? (

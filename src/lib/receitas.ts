@@ -406,6 +406,14 @@ export async function atualizarReceita(
       }
     }
 
+    // Se a receita já possui um produto vinculado na loja, sincroniza a categoria
+    await client.query(
+      `UPDATE produtos 
+       SET categoria = $1 
+       WHERE id IN (SELECT produto_id FROM receitas WHERE id = $2 AND produto_id IS NOT NULL)`,
+      [dados.categoria || "doces", id]
+    );
+
     await client.query("COMMIT");
   } catch (err) {
     await client.query("ROLLBACK");

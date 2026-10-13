@@ -58,6 +58,27 @@ export async function listarCardapioPublico(): Promise<Produto[]> {
   }
 }
 
+export async function listarCategorias(): Promise<string[]> {
+  try {
+    const { rows } = await getPool().query<{ categoria: string }>(
+      `SELECT DISTINCT TRIM(categoria) AS categoria
+       FROM (
+         SELECT categoria FROM produtos WHERE categoria IS NOT NULL AND TRIM(categoria) != ''
+         UNION
+         SELECT categoria FROM receitas WHERE categoria IS NOT NULL AND TRIM(categoria) != ''
+       ) t
+       ORDER BY categoria ASC`
+    );
+    const categoriasDoBanco = rows.map((r) => r.categoria).filter(Boolean);
+    const categoriasPadrao = ["doces", "sobremesas", "salgados"];
+    const todas = Array.from(new Set([...categoriasDoBanco, ...categoriasPadrao]));
+    return todas;
+  } catch (err) {
+    console.error("Erro ao listar categorias:", err);
+    return ["doces", "sobremesas", "salgados"];
+  }
+}
+
 export async function criarProduto(input: ProdutoInput): Promise<ProdutoAdmin> {
   const { rows } = await getPool().query<ProdutoAdmin>(
     `INSERT INTO produtos (nome, descricao, preco, estoque_atual, categoria, ativo)
