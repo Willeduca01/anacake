@@ -7,7 +7,7 @@ New-Item -ItemType Directory -Path $tempDir | Out-Null
 $exclude = @('node_modules', '.next', '.git', '.vercel', 'anacake-projeto.zip', 'anacake.zip')
 
 Get-ChildItem -Path . -Force | Where-Object { 
-    $_.Name -notin $exclude -and $_.Name -notlike '.env*' -and $_.Name -notlike '*.zip'
+    $_.Name -notin $exclude -and ($_.Name -notlike '.env*' -or $_.Name -eq '.env.example') -and $_.Name -notlike '*.zip'
 } | ForEach-Object {
     Copy-Item -Path $_.FullName -Destination $tempDir -Recurse -Force
 }
