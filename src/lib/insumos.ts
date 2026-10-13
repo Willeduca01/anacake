@@ -202,52 +202,96 @@ export async function criarInsumo(input: InsumoInput): Promise<Insumo> {
     (input.unidades_por_pack || 1) * (input.peso_unitario || input.quantidade_embalagem);
 
   const custoBase = input.preco_embalagem / (quantidadeTotal || 1);
-  const estoqueInicial = input.estoque_atual !== undefined ? input.estoque_atual : 1;
+  const estoqueInicial =
+    input.estoque_atual !== undefined
+      ? input.estoque_atual
+      : input.unidades_por_pack || 1;
   const estoqueMinimo = input.estoque_minimo !== undefined ? input.estoque_minimo : 5;
 
-  const { rows } = await getPool().query<Insumo>(
-    `INSERT INTO insumos (
-       insumo_base_id, 
-       nome, 
-       tipo_medida, 
-       formato_compra, 
-       unidades_por_pack, 
-       peso_unitario, 
-       quantidade_embalagem, 
-       preco_embalagem, 
-       custo_por_unidade_base,
-       estoque_atual,
-       estoque_minimo
-     )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-     RETURNING 
-       id, 
-       insumo_base_id, 
-       nome, 
-       tipo_medida, 
-       formato_compra, 
-       unidades_por_pack::float8 AS unidades_por_pack, 
-       peso_unitario::float8 AS peso_unitario, 
-       quantidade_embalagem::float8 AS quantidade_embalagem, 
-       preco_embalagem::float8 AS preco_embalagem, 
-       custo_por_unidade_base::float8 AS custo_por_unidade_base,
-       estoque_atual::float8 AS estoque_atual,
-       estoque_minimo::float8 AS estoque_minimo`,
-    [
-      input.insumo_base_id || null,
-      input.nome,
-      input.tipo_medida,
-      input.formato_compra || "UNIDADE",
-      input.unidades_por_pack || 1,
-      input.peso_unitario || input.quantidade_embalagem,
-      quantidadeTotal,
-      input.preco_embalagem,
-      custoBase,
-      estoqueInicial,
-      estoqueMinimo,
-    ]
-  );
-  return rows[0];
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows } = await client.query<Insumo>(
+      `INSERT INTO insumos (
+         insumo_base_id, 
+         nome, 
+         tipo_medida, 
+         formato_compra, 
+         unidades_por_pack, 
+         peso_unitario, 
+         quantidade_embalagem, 
+         preco_embalagem, 
+         custo_por_unidade_base,
+         estoque_atual,
+         estoque_minimo
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING 
+         id, 
+         insumo_base_id, 
+         nome, 
+         tipo_medida, 
+         formato_compra, 
+         unidades_por_pack::float8 AS unidades_por_pack, 
+         peso_unitario::float8 AS peso_unitario, 
+         quantidade_embalagem::float8 AS quantidade_embalagem, 
+         preco_embalagem::float8 AS preco_embalagem, 
+         custo_por_unidade_base::float8 AS custo_por_unidade_base,
+         estoque_atual::float8 AS estoque_atual,
+         estoque_minimo::float8 AS estoque_minimo`,
+      [
+        input.insumo_base_id || null,
+        input.nome,
+        input.tipo_medida,
+        input.formato_compra || "UNIDADE",
+        input.unidades_por_pack || 1,
+        input.peso_unitario || input.quantidade_embalagem,
+        quantidadeTotal,
+        input.preco_embalagem,
+        custoBase,
+        estoqueInicial,
+        estoqueMinimo,
+      ]
+    );
+
+    const novoInsumo = rows[0];
+
+    // Registra a compra inicial em insumo_compras para constar no fluxo financeiro do dashboard
+    if (input.preco_embalagem > 0) {
+      const qtdCompra = input.unidades_por_pack || 1;
+      const precoUnitCompra = input.preco_embalagem / (qtdCompra || 1);
+
+      await client.query(
+        `INSERT INTO insumo_compras (
+           insumo_id,
+           quantidade,
+           preco_total,
+           preco_unitario,
+           estabelecimento,
+           data_compra,
+           observacoes
+         )
+         VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, $6)`,
+        [
+          novoInsumo.id,
+          qtdCompra,
+          input.preco_embalagem,
+          precoUnitCompra,
+          "Cadastro de Insumo",
+          "Entrada inicial registrada no cadastro do insumo",
+        ]
+      );
+    }
+
+    await client.query("COMMIT");
+    return novoInsumo;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export async function atualizarInsumo(
