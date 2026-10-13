@@ -126,6 +126,7 @@ function ProdutoForm({
           required
           defaultValue={produto?.preco ?? ""}
           className={inputClass}
+          placeholder="Ex: 25.00"
         />
       </div>
 
@@ -136,8 +137,9 @@ function ProdutoForm({
           type="number"
           min="0"
           required
-          defaultValue={produto?.estoque_atual ?? 0}
+          defaultValue={produto ? produto.estoque_atual : ""}
           className={inputClass}
+          placeholder="Ex: 10"
         />
       </div>
 

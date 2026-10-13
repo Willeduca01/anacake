@@ -15,7 +15,8 @@ export interface Produto {
 }
 
 export const API_CARDAPIO_URL =
-  "http://4.204.40.176:5678/webhook/Cardapio";
+  process.env.NEXT_PUBLIC_API_CARDAPIO_URL ||
+  "http://localhost:5678/webhook/Cardapio";
 
 const imagensPorCategoria: Record<string, string> = {
   doces: "https://images.unsplash.com/photo-1614707267537-b85aaf00c4b7?w=400&h=300&fit=crop",

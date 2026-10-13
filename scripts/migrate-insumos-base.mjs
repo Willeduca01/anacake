@@ -1,7 +1,13 @@
 import pg from 'pg';
-const { Pool } = pg;
+import { getDatabaseUrl } from './get-db-url.mjs';
 
-const connectionString = 'postgresql://neondb_owner:npg_aUgOIK0HkTE2@ep-dark-boat-b6q25xt7-pooler.c-2.sa-east-1.aws.neon.tech/neondb?sslmode=require';
+const { Pool } = pg;
+const connectionString = getDatabaseUrl();
+
+if (!connectionString) {
+  console.error('Erro: DATABASE_URL não configurada no ambiente nem no arquivo .env.');
+  process.exit(1);
+}
 
 async function migrate() {
   const pool = new Pool({ connectionString });

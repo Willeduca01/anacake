@@ -180,7 +180,7 @@ function ProdutoBaseCombobox({
 
           {itensFiltrados.length === 0 ? (
             <div className="p-4 text-center text-xs text-chocolate-muted">
-              Nenhum produto base encontrado com "{busca}".
+              Nenhum produto base encontrado com &quot;{busca}&quot;.
             </div>
           ) : (
             <div className="divide-y divide-rose-light/30">
@@ -245,12 +245,13 @@ function InsumoBaseForm({
 }) {
   const [enviando, setEnviando] = useState(false);
   const [unidade, setUnidade] = useState(itemBase?.unidade_padrao ?? "g");
-  const [quantidade, setQuantidade] = useState<number>(
-    itemBase?.quantidade_padrao ?? 1000
+  const [quantidade, setQuantidade] = useState<number | "">(
+    itemBase ? itemBase.quantidade_padrao : ""
   );
 
   const previewConversao = useMemo(() => {
     const q = Number(quantidade) || 0;
+    if (q <= 0) return "Informe a quantidade acima para ver a conversão.";
     if (unidade === "kg") {
       return `${q} kg = ${(q * 1000).toLocaleString("pt-BR")} gramas (g)`;
     }
@@ -300,7 +301,10 @@ function InsumoBaseForm({
           min="0.01"
           required
           value={quantidade}
-          onChange={(e) => setQuantidade(parseFloat(e.target.value) || 0)}
+          onChange={(e) => {
+            const val = e.target.value;
+            setQuantidade(val === "" ? "" : parseFloat(val));
+          }}
           className={inputClass}
           placeholder="Ex: 1 para 1kg, 395 para 395g, 1 para 1L"
         />
@@ -381,29 +385,29 @@ function InsumoForm({
   const [formatoCompra, setFormatoCompra] = useState<FormatoCompra>(
     insumo?.formato_compra ?? "UNIDADE"
   );
-  const [unidadesPack, setUnidadesPack] = useState<number>(
-    insumo?.unidades_por_pack ?? 12
+  const [unidadesPack, setUnidadesPack] = useState<number | "">(
+    insumo?.unidades_por_pack ? insumo.unidades_por_pack : ""
   );
-  const [quantidadeUnidades, setQuantidadeUnidades] = useState<number>(
-    insumo && insumo.formato_compra === "UNIDADE"
-      ? (insumo.unidades_por_pack || 1)
-      : 1
+  const [quantidadeUnidades, setQuantidadeUnidades] = useState<number | "">(
+    insumo && insumo.formato_compra === "UNIDADE" && insumo.unidades_por_pack
+      ? insumo.unidades_por_pack
+      : ""
   );
-  const [pesoUnitario, setPesoUnitario] = useState<number>(
-    insumo?.peso_unitario ?? insumo?.quantidade_embalagem ?? 395
+  const [pesoUnitario, setPesoUnitario] = useState<number | "">(
+    insumo?.peso_unitario ?? insumo?.quantidade_embalagem ?? ""
   );
-  const [precoTotal, setPrecoTotal] = useState<number>(
-    insumo?.preco_embalagem ?? 0
+  const [precoTotal, setPrecoTotal] = useState<number | "">(
+    insumo?.preco_embalagem ? insumo.preco_embalagem : ""
   );
-  const [precoUnitario, setPrecoUnitario] = useState<number>(() => {
-    if (!insumo) return 0;
+  const [precoUnitario, setPrecoUnitario] = useState<number | "">(() => {
+    if (!insumo) return "";
     if (insumo.formato_compra === "UNIDADE" && insumo.unidades_por_pack > 1) {
       return (
         Math.round((insumo.preco_embalagem / insumo.unidades_por_pack) * 100) /
         100
       );
     }
-    return insumo.preco_embalagem;
+    return insumo.preco_embalagem ? insumo.preco_embalagem : "";
   });
 
   // Manipular seleção do combobox
@@ -419,20 +423,26 @@ function InsumoForm({
   };
 
   // Cálculos automáticos em tempo real
-  const unidadesEfetivas =
-    formatoCompra === "PACK" ? unidadesPack : quantidadeUnidades;
+  const uPackNum = Number(unidadesPack) || 0;
+  const qUnidadesNum = Number(quantidadeUnidades) || 0;
+  const pesoUnitarioNum = Number(pesoUnitario) || 0;
+  const precoTotalNum = Number(precoTotal) || 0;
+  const precoUnitarioNum = Number(precoUnitario) || 0;
 
-  const quantidadeTotalCalculada = unidadesEfetivas * pesoUnitario;
+  const unidadesEfetivas =
+    formatoCompra === "PACK" ? uPackNum : qUnidadesNum;
+
+  const quantidadeTotalCalculada = unidadesEfetivas * pesoUnitarioNum;
 
   const precoTotalCalculado =
-    formatoCompra === "PACK" ? precoTotal : quantidadeUnidades * precoUnitario;
+    formatoCompra === "PACK" ? precoTotalNum : qUnidadesNum * precoUnitarioNum;
 
   const precoPorUnidadeExibido =
     formatoCompra === "PACK"
-      ? unidadesPack > 0
-        ? precoTotal / unidadesPack
+      ? uPackNum > 0
+        ? precoTotalNum / uPackNum
         : 0
-      : precoUnitario;
+      : precoUnitarioNum;
 
   const custoBaseUnitario =
     precoTotalCalculado > 0 && quantidadeTotalCalculada > 0
@@ -535,7 +545,10 @@ function InsumoForm({
                 step="1"
                 required
                 value={unidadesPack}
-                onChange={(e) => setUnidadesPack(parseInt(e.target.value) || 1)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setUnidadesPack(val === "" ? "" : parseInt(val));
+                }}
                 className={inputClass}
                 placeholder="Ex: 12 (se for fardo com 12)"
               />
@@ -552,7 +565,10 @@ function InsumoForm({
                 min="0.01"
                 required
                 value={pesoUnitario}
-                onChange={(e) => setPesoUnitario(parseFloat(e.target.value) || 0)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPesoUnitario(val === "" ? "" : parseFloat(val));
+                }}
                 className={inputClass}
                 placeholder="Ex: 395 (se cada lata tem 395g) ou 1000"
               />
@@ -566,8 +582,11 @@ function InsumoForm({
                 step="0.01"
                 min="0.01"
                 required
-                value={precoTotal || ""}
-                onChange={(e) => setPrecoTotal(parseFloat(e.target.value) || 0)}
+                value={precoTotal}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPrecoTotal(val === "" ? "" : parseFloat(val));
+                }}
                 className={inputClass}
                 placeholder="Ex: 72.00 (valor total do fardo)"
               />
@@ -585,12 +604,13 @@ function InsumoForm({
                 min="1"
                 step="1"
                 required
-                value={quantidadeUnidades || ""}
-                onChange={(e) =>
-                  setQuantidadeUnidades(Math.max(1, parseInt(e.target.value) || 1))
-                }
+                value={quantidadeUnidades}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setQuantidadeUnidades(val === "" ? "" : parseInt(val));
+                }}
                 className={inputClass}
-                placeholder="Ex: 6 (se comprou 6 unidades)"
+                placeholder="Ex: 1 (ou 6 se comprou 6 unidades)"
               />
               <span className="text-[11px] text-chocolate-muted mt-0.5 block">
                 Quantas unidades/latas/itens foram comprados.
@@ -607,10 +627,13 @@ function InsumoForm({
                 step="0.01"
                 min="0.01"
                 required
-                value={pesoUnitario || ""}
-                onChange={(e) => setPesoUnitario(parseFloat(e.target.value) || 0)}
+                value={pesoUnitario}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPesoUnitario(val === "" ? "" : parseFloat(val));
+                }}
                 className={inputClass}
-                placeholder="Ex: 395 (se cada lata tem 395g ou 395ml)"
+                placeholder="Ex: 395 (se cada lata tem 395g ou 395ml) ou 1000"
               />
               <span className="text-[11px] text-chocolate-muted mt-0.5 block">
                 Conteúdo de 1 unidade individual.
@@ -627,13 +650,18 @@ function InsumoForm({
                 step="0.01"
                 min="0.01"
                 required
-                value={precoUnitario || ""}
-                onChange={(e) => setPrecoUnitario(parseFloat(e.target.value) || 0)}
+                value={precoUnitario}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPrecoUnitario(val === "" ? "" : parseFloat(val));
+                }}
                 className={inputClass}
                 placeholder="Ex: 7.50 (preço pago por 1 unidade)"
               />
               <span className="text-[11px] text-chocolate-muted mt-0.5 block">
-                Valor pago por 1 unidade. A soma total da compra será {formatarMoeda(precoTotalCalculado)} ({quantidadeUnidades} un x {formatarMoeda(precoUnitario)}).
+                {qUnidadesNum > 0 && precoUnitarioNum > 0
+                  ? `Valor pago por 1 unidade. A soma total da compra será ${formatarMoeda(precoTotalCalculado)} (${qUnidadesNum} un x ${formatarMoeda(precoUnitarioNum)}).`
+                  : "Valor pago por 1 unidade individual."}
               </span>
             </div>
           </>
@@ -656,10 +684,10 @@ function InsumoForm({
             </strong>
             <span className="text-[11px] text-chocolate-muted block">
               {formatoCompra === "PACK"
-                ? `(${unidadesPack} un x ${pesoUnitario} ${sufixoBase})`
-                : quantidadeUnidades > 1
-                ? `(${quantidadeUnidades} un x ${pesoUnitario} ${sufixoBase})`
-                : `(1 un de ${pesoUnitario} ${sufixoBase})`}
+                ? `(${unidadesPack || 0} un x ${pesoUnitario || 0} ${sufixoBase})`
+                : Number(quantidadeUnidades) > 1
+                ? `(${quantidadeUnidades} un x ${pesoUnitario || 0} ${sufixoBase})`
+                : `(1 un de ${pesoUnitario || 0} ${sufixoBase})`}
             </span>
           </div>
 

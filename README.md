@@ -125,15 +125,16 @@ O sistema passou por auditoria e refatoração de segurança completa:
    ```
 
 3. **Configurar as Variáveis de Ambiente:**
-   O arquivo `.env` já vem pré-configurado neste pacote. Caso precise recriá-lo, copie o `.env.example` para `.env`:
+   O arquivo `.env` deve ser configurado a partir do `.env.example`:
    ```env
-   # Conexão com o banco Neon PostgreSQL
-   DATABASE_URL=postgresql://neondb_owner:npg_aUgOIK0HkTE2@ep-dark-boat-b6q25xt7-pooler.c-2.sa-east-1.aws.neon.tech/neondb?sslmode=require
+   # Conexão com o banco Neon PostgreSQL (substitua pelas credenciais do seu banco)
+   DATABASE_URL=postgresql://seu_usuario:sua_senha@ep-exemplo.sa-east-1.aws.neon.tech/neondb?sslmode=require
 
    # Credenciais do administrador do painel /admin
    ADMIN_USER=admin
-   ADMIN_PASSWORD_HASH_B64=JDJiJDEwJERlMC91Vm1Scm5ML0s4NWg0VHMuUmU3MmFDc1F4Z3lXc0J2MTJ3QXdvSDZvWWdtQUhCOGsy
-   AUTH_SECRET=4be82f7d3c6bf561b84482b45d1663b5033ad5f605576a82873faa3d57a29406
+   # Gere o hash e o secret com: node gen-cred.cjs "SuaSenhaForteAqui"
+   ADMIN_PASSWORD_HASH_B64=seu_hash_base64_aqui
+   AUTH_SECRET=seu_auth_secret_hex_aqui
    COOKIE_SECURE=false
 
    # Rate Limiting (Opcional em desenvolvimento, recomendado na Vercel)
@@ -152,13 +153,13 @@ O sistema passou por auditoria e refatoração de segurança completa:
 
 ---
 
-## 🔑 Credenciais Padrão do Painel Admin
+## 🔑 Acesso ao Painel Admin
 
 * **URL de Acesso:** `/admin`
-* **Usuário:** `admin`
-* **Senha:** `AnaCake@Admin2026`
+* **Usuário:** Configurado na variável `ADMIN_USER` do `.env`
+* **Senha:** Definida ao rodar `node gen-cred.cjs "SuaSenhaForte"`
 
-*(Para alterar a senha no futuro, utilize o comando `node gen-cred.cjs "NovaSenhaForte"` e atualize o `ADMIN_PASSWORD_HASH_B64` no `.env`).*
+*(Para alterar a senha, utilize o comando `node gen-cred.cjs "NovaSenhaForte"` e atualize `ADMIN_PASSWORD_HASH_B64` e `AUTH_SECRET` no seu `.env`).*
 
 ---
 

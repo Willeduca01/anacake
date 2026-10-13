@@ -176,7 +176,7 @@ function InsumoItemCombobox({
         <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-rose-light bg-white shadow-xl max-h-52 overflow-y-auto overscroll-contain">
           {itensFiltrados.length === 0 ? (
             <div className="p-3 text-center text-xs text-chocolate-muted">
-              Nenhum insumo encontrado com "{busca}".
+              Nenhum insumo encontrado com &quot;{busca}&quot;.
             </div>
           ) : (
             <div className="divide-y divide-rose-light/30">
@@ -231,7 +231,7 @@ function InsumoItemCombobox({
 interface ItemLinhaIngrediente {
   tempId: string;
   insumoId: string;
-  quantidade: number;
+  quantidade: number | "";
 }
 
 function ReceitaForm({
@@ -247,14 +247,16 @@ function ReceitaForm({
   const [erro, setErro] = useState<string | null>(null);
 
   const [nome, setNome] = useState(receita?.nome ?? "");
-  const [rendimento, setRendimento] = useState<number>(receita?.rendimento ?? 1);
-  const [custoEmbalagem, setCustoEmbalagem] = useState<number>(
-    receita?.custo_embalagem ?? 0
+  const [rendimento, setRendimento] = useState<number | "">(
+    receita?.rendimento ? receita.rendimento : ""
   );
-  const [taxaInvisiveis, setTaxaInvisiveis] = useState<number>(
+  const [custoEmbalagem, setCustoEmbalagem] = useState<number | "">(
+    receita && receita.custo_embalagem > 0 ? receita.custo_embalagem : ""
+  );
+  const [taxaInvisiveis, setTaxaInvisiveis] = useState<number | "">(
     receita?.taxa_custos_invisiveis ?? 20
   );
-  const [margemLucro, setMargemLucro] = useState<number>(
+  const [margemLucro, setMargemLucro] = useState<number | "">(
     receita?.margem_lucro_desejada ?? 150
   );
 
@@ -272,13 +274,13 @@ function ReceitaForm({
         quantidade: ing.quantidade_utilizada,
       }));
     }
-    return [{ tempId: "row-1", insumoId: "", quantidade: 0 }];
+    return [{ tempId: "row-1", insumoId: "", quantidade: "" }];
   });
 
   const adicionarLinha = () => {
     setLinhas((prev) => [
       ...prev,
-      { tempId: `row-${Date.now()}-${Math.random()}`, insumoId: "", quantidade: 0 },
+      { tempId: `row-${Date.now()}-${Math.random()}`, insumoId: "", quantidade: "" },
     ]);
   };
 
@@ -294,7 +296,7 @@ function ReceitaForm({
     );
   };
 
-  const atualizarLinhaQtd = (tempId: string, qtd: number) => {
+  const atualizarLinhaQtd = (tempId: string, qtd: number | "") => {
     setLinhas((prev) =>
       prev.map((l) => (l.tempId === tempId ? { ...l, quantidade: qtd } : l))
     );
@@ -324,17 +326,22 @@ function ReceitaForm({
 
     linhas.forEach((linha) => {
       const insumo = insumosMap.get(linha.insumoId);
-      if (insumo && linha.quantidade > 0) {
-        custoIngredientes += linha.quantidade * insumo.custo_por_unidade_base;
+      const qtdNum = Number(linha.quantidade) || 0;
+      if (insumo && qtdNum > 0) {
+        custoIngredientes += qtdNum * insumo.custo_por_unidade_base;
       }
     });
 
-    const valorInvisiveis = custoIngredientes * (taxaInvisiveis / 100);
-    const custoProducaoTotal = custoIngredientes + valorInvisiveis + custoEmbalagem;
-    const rend = Math.max(1, rendimento);
+    const taxaInv = Number(taxaInvisiveis) || 0;
+    const custoEmb = Number(custoEmbalagem) || 0;
+    const margem = Number(margemLucro) || 0;
+    const rend = Math.max(1, Number(rendimento) || 1);
+
+    const valorInvisiveis = custoIngredientes * (taxaInv / 100);
+    const custoProducaoTotal = custoIngredientes + valorInvisiveis + custoEmb;
     const custoPorPorcao = custoProducaoTotal / rend;
 
-    const precoSugeridoTotal = custoProducaoTotal * (1 + margemLucro / 100);
+    const precoSugeridoTotal = custoProducaoTotal * (1 + margem / 100);
     const precoSugeridoPorcao = precoSugeridoTotal / rend;
     const lucroTotal = precoSugeridoTotal - custoProducaoTotal;
     const lucroPorPorcao = lucroTotal / rend;
@@ -355,11 +362,17 @@ function ReceitaForm({
     e.preventDefault();
     setErro(null);
 
+    const rendNum = Number(rendimento);
+    if (!rendNum || rendNum < 1) {
+      setErro("Informe o rendimento da receita (mínimo 1 porção/unidade).");
+      return;
+    }
+
     const ingredientesValidos = linhas
-      .filter((l) => l.insumoId && l.quantidade > 0)
+      .filter((l) => l.insumoId && Number(l.quantidade) > 0)
       .map((l) => ({
         insumo_id: l.insumoId,
-        quantidade_utilizada: l.quantidade,
+        quantidade_utilizada: Number(l.quantidade),
       }));
 
     if (ingredientesValidos.length === 0) {
@@ -370,10 +383,10 @@ function ReceitaForm({
     const formData = new FormData();
     if (receita) formData.append("id", receita.id);
     formData.append("nome", nome);
-    formData.append("rendimento", String(rendimento));
-    formData.append("custo_embalagem", String(custoEmbalagem));
-    formData.append("taxa_custos_invisiveis", String(taxaInvisiveis));
-    formData.append("margem_lucro_desejada", String(margemLucro));
+    formData.append("rendimento", String(rendNum));
+    formData.append("custo_embalagem", String(Number(custoEmbalagem) || 0));
+    formData.append("taxa_custos_invisiveis", String(Number(taxaInvisiveis) || 0));
+    formData.append("margem_lucro_desejada", String(Number(margemLucro) || 0));
     formData.append("ingredientes_json", JSON.stringify(ingredientesValidos));
 
     if (removerImagem) {
@@ -470,7 +483,10 @@ function ReceitaForm({
               step="1"
               required
               value={rendimento}
-              onChange={(e) => setRendimento(parseInt(e.target.value) || 1)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setRendimento(val === "" ? "" : parseInt(val));
+              }}
               className={inputClass}
               placeholder="Ex: 1 (bolo) ou 12 (fatias)"
             />
@@ -488,7 +504,10 @@ function ReceitaForm({
               step="0.01"
               min="0"
               value={custoEmbalagem}
-              onChange={(e) => setCustoEmbalagem(parseFloat(e.target.value) || 0)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setCustoEmbalagem(val === "" ? "" : parseFloat(val));
+              }}
               className={inputClass}
               placeholder="Ex: 3.50 (caixa, fita)"
             />
@@ -506,7 +525,10 @@ function ReceitaForm({
               step="1"
               min="0"
               value={taxaInvisiveis}
-              onChange={(e) => setTaxaInvisiveis(parseFloat(e.target.value) || 0)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setTaxaInvisiveis(val === "" ? "" : parseFloat(val));
+              }}
               className={inputClass}
               placeholder="Ex: 20 (recomendado 20% a 25%)"
             />
@@ -524,7 +546,10 @@ function ReceitaForm({
               step="1"
               min="0"
               value={margemLucro}
-              onChange={(e) => setMargemLucro(parseFloat(e.target.value) || 0)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setMargemLucro(val === "" ? "" : parseFloat(val));
+              }}
               className={inputClass}
               placeholder="Ex: 150 (para 150% de lucro)"
             />
@@ -565,9 +590,10 @@ function ReceitaForm({
                 ? "ml"
                 : "un";
 
+            const qtdLinhaNum = Number(linha.quantidade) || 0;
             const subtotal =
-              insumoAtual && linha.quantidade > 0
-                ? linha.quantidade * insumoAtual.custo_por_unidade_base
+              insumoAtual && qtdLinhaNum > 0
+                ? qtdLinhaNum * insumoAtual.custo_por_unidade_base
                 : 0;
 
             return (
@@ -592,10 +618,11 @@ function ReceitaForm({
                       type="number"
                       step="0.01"
                       min="0.01"
-                      value={linha.quantidade || ""}
-                      onChange={(e) =>
-                        atualizarLinhaQtd(linha.tempId, parseFloat(e.target.value) || 0)
-                      }
+                      value={linha.quantidade}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        atualizarLinhaQtd(linha.tempId, val === "" ? "" : parseFloat(val));
+                      }}
                       placeholder="Qtd usada"
                       className={`${inputClass} pr-7 text-xs`}
                     />
@@ -637,7 +664,7 @@ function ReceitaForm({
             </h4>
           </div>
           <span className="text-xs font-semibold rounded-full bg-rose-light px-2.5 py-0.5 text-chocolate">
-            Rendimento: {rendimento} {rendimento === 1 ? "porção" : "porções"}
+            Rendimento: {rendimento || 1} {Number(rendimento) === 1 ? "porção" : "porções"}
           </span>
         </div>
 
@@ -650,7 +677,9 @@ function ReceitaForm({
           </div>
 
           <div className="rounded-xl bg-cream/70 p-3">
-            <span className="text-chocolate-muted block text-[11px]">Custos Invisíveis ({taxaInvisiveis}%):</span>
+            <span className="text-chocolate-muted block text-[11px]">
+              Custos Invisíveis ({taxaInvisiveis === "" ? 0 : taxaInvisiveis}%):
+            </span>
             <strong className="text-sm text-chocolate font-bold">
               {formatarMoeda(calculos.valorInvisiveis)}
             </strong>
@@ -659,7 +688,7 @@ function ReceitaForm({
           <div className="rounded-xl bg-cream/70 p-3">
             <span className="text-chocolate-muted block text-[11px]">Embalagem:</span>
             <strong className="text-sm text-chocolate font-bold">
-              {formatarMoeda(custoEmbalagem)}
+              {formatarMoeda(Number(custoEmbalagem) || 0)}
             </strong>
           </div>
 
@@ -668,7 +697,7 @@ function ReceitaForm({
             <strong className="text-base text-chocolate font-extrabold block">
               {formatarMoeda(calculos.custoProducaoTotal)}
             </strong>
-            {rendimento > 1 && (
+            {Number(rendimento) > 1 && (
               <span className="text-[11px] text-chocolate-muted">
                 ({formatarMoeda(calculos.custoPorPorcao)} / porção)
               </span>
@@ -680,12 +709,12 @@ function ReceitaForm({
           <div className="space-y-0.5 text-center sm:text-left">
             <span className="text-xs font-semibold text-rose-pastel uppercase tracking-wider flex items-center gap-1 justify-center sm:justify-start">
               <Sparkles className="w-3.5 h-3.5" />
-              Preço de Venda Sugerido ({margemLucro}% de margem)
+              Preço de Venda Sugerido ({margemLucro === "" ? 0 : margemLucro}% de margem)
             </span>
             <div className="text-2xl font-black text-chocolate tracking-tight">
               {formatarMoeda(calculos.precoSugeridoTotal)}
             </div>
-            {rendimento > 1 && (
+            {Number(rendimento) > 1 && (
               <div className="text-xs font-bold text-chocolate-light">
                 👉 {formatarMoeda(calculos.precoSugeridoPorcao)} por cada porção/fatia
               </div>
@@ -698,7 +727,7 @@ function ReceitaForm({
               <strong className="text-lg font-bold text-badge-green-text">
                 +{formatarMoeda(calculos.lucroTotal)}
               </strong>
-              {rendimento > 1 && (
+              {Number(rendimento) > 1 && (
                 <span className="text-[11px] text-chocolate-muted block">
                   (+{formatarMoeda(calculos.lucroPorPorcao)} / porção)
                 </span>
@@ -749,7 +778,7 @@ function ModalPublicarReceita({
   const [descricao, setDescricao] = useState(receita.descricao || "");
 
   // Preço inicial: pode ser o total ou o por fatia dependendo do rendimento
-  const [preco, setPreco] = useState<number>(() => {
+  const [preco, setPreco] = useState<number | "">(() => {
     if (receita.produto_preco && receita.produto_preco > 0) {
       return receita.produto_preco;
     }
@@ -799,6 +828,12 @@ function ModalPublicarReceita({
     e.preventDefault();
     setErro(null);
 
+    const precoNum = Number(preco);
+    if (!precoNum || precoNum <= 0) {
+      setErro("Por favor, digite um preço de venda válido.");
+      return;
+    }
+
     const qtdNum = parseInt(estoque, 10);
     if (isNaN(qtdNum) || qtdNum <= 0) {
       setErro("Por favor, digite a quantidade a ser publicada no site.");
@@ -810,7 +845,7 @@ function ModalPublicarReceita({
     formData.append("nome", nome);
     formData.append("categoria", categoria);
     formData.append("descricao", descricao);
-    formData.append("preco", String(preco));
+    formData.append("preco", String(precoNum));
     formData.append("estoque_atual", String(qtdNum));
     formData.append("somar_ao_estoque", somarAoEstoque ? "true" : "false");
     formData.append("subtrair_insumos_estoque", subtrairInsumos ? "true" : "false");
@@ -982,7 +1017,10 @@ function ModalPublicarReceita({
                   min="0.01"
                   required
                   value={preco}
-                  onChange={(e) => setPreco(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPreco(val === "" ? "" : parseFloat(val));
+                  }}
                   className={inputClass}
                 />
                 <div className="mt-1 flex gap-2">

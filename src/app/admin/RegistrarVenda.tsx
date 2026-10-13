@@ -68,9 +68,10 @@ export default function RegistrarVenda({
             name="quantidade"
             type="number"
             min="1"
-            defaultValue={1}
+            defaultValue=""
             required
             className={inputClass}
+            placeholder="Ex: 1"
           />
         </div>
 

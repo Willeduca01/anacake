@@ -4,13 +4,20 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+## 🛡️ Políticas Críticas de Segurança (NUNCA VIOLAR)
+
+- **NUNCA publicar dados sensíveis no repositório Git:** Strings de conexão de banco (`DATABASE_URL`, credenciais Neon/PostgreSQL), senhas em texto puro, segredos de assinatura (`AUTH_SECRET`), tokens de API (`UPSTASH_REDIS_REST_TOKEN`, etc.) e hashes reais NUNCA devem ser commitados no código, documentação ou scripts.
+- **Documentação e Exemplos:** Em arquivos como `README.md` ou `.env.example`, use ESTRITAMENTE placeholders genéricos (ex: `DATABASE_URL=postgresql://usuario:senha@host:5432/db`).
+- **Scripts de Automação:** Scripts dentro de `scripts/` NUNCA devem ter URLs de banco ou senhas hardcoded. Devem sempre ler de `process.env.DATABASE_URL` ou utilizar o utilitário `scripts/get-db-url.mjs` que lê o arquivo `.env` local (o qual é estritamente ignorado pelo Git).
+- **Arquivos Compactados:** Scripts de backup/zip devem sempre excluir `.env*` para evitar vazamento acidental de credenciais em arquivos `.zip`.
+
 ## Decisões de Arquitetura
 
 ### 2026-06-05 - Deploy via Docker (Node dinâmico) atrás de nginx (proxy reverso)
 
 **Decisão:** Containerizar a aplicação com um `Dockerfile` multi-stage usando o output `standalone` do Next.js, orquestrado por `docker-compose.yml`, rodando como servidor Node em `127.0.0.1:3000`. O nginx (já existente na VM, porta 80) atua como **proxy reverso** para `http://127.0.0.1:3000`. Deploy via Git: `git pull` + `docker compose up -d --build`.
 
-**Contexto:** O cardápio é dinâmico — vem em tempo de execução de um webhook do n8n (`http://4.204.40.176:5678/webhook/Cardapio`, backend n8n + postgres em Docker na VM). A produção estava servindo um **export estático** (`out/`) via nginx, que não refletia atualizações de cardápio/estoque. Além disso, não havia versionamento (a pasta na VM não era um repositório git).
+**Contexto:** O cardápio é dinâmico — vem em tempo de execução de um webhook do n8n (`http://<IP_DA_VM>:5678/webhook/Cardapio`, backend n8n + postgres em Docker na VM). A produção estava servindo um **export estático** (`out/`) via nginx, que não refletia atualizações de cardápio/estoque. Além disso, não havia versionamento (a pasta na VM não era um repositório git).
 
 **Alternativas descartadas:**
 - *Editar direto no container / na VM:* sem build/versionamento, mudanças efêmeras.
