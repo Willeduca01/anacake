@@ -94,3 +94,19 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - *Redimensionar no servidor (sharp):* dependência nativa pesada numa VM de 892MB; resolvido no cliente via canvas.
 
 **Impacto:** Migração idempotente: `ALTER TABLE produtos ADD COLUMN IF NOT EXISTS imagem_dados BYTEA, imagem_mime`. **Pendência fora deste repo:** para a imagem aparecer no site, o **workflow do n8n precisa passar a retornar `url_imagem`** no SELECT do cardápio (a usuária faz isso). Até lá, o site cai no fallback por categoria (sem quebra). `ProdutoInput` não tem mais `url_imagem` (gerenciada pelo upload). A rota de imagem é pública (são imagens de produto).
+
+### 2026-10-14 - Índices de alta performance no PostgreSQL
+
+**Decisão:** Criação de índices estratégicos e parciais no PostgreSQL para eliminar Sequential Scans (Seq Scan) e nós de ordenação (Sort) em memória, aliviando o consumo de CPU/RAM no servidor:
+1. `idx_produtos_nome`: Índice B-tree em `produtos(nome)` para acelerar o lock de linhas e verificação de estoque na confirmação de pedidos (`WHERE nome = $1 FOR UPDATE`).
+2. `idx_produtos_cardapio`: Índice B-tree parcial em `produtos (categoria, nome) WHERE ativo = true` para entregar os produtos do cardápio público já pré-filtrados e ordenados, sem custo de Sort nem Seq Scan.
+3. `idx_insumos_insumo_base_id`: Índice na chave estrangeira `insumos(insumo_base_id)`, eliminando seq scans em joins e garantindo integridade referencial rápida.
+4. `idx_pedidos_pendentes_created`: Índice parcial em `pedidos (created_at DESC) WHERE status = 'pendente'` para otimizar tanto o polling de contagem da badge a cada 20s quanto a listagem sem nó de Sort.
+5. `idx_insumo_compras_insumo_data`: Índice composto em `insumo_compras (insumo_id, data_compra DESC)` para histórico de compras por insumo.
+6. `idx_receitas_nome`: Índice em `receitas(nome)` para listagem ordenada alfabética.
+7. `idx_vendas_data_id`: Índice composto em `vendas (data_venda DESC, id DESC)` para paginação e desempate no painel financeiro.
+
+**Contexto:** O servidor possui recursos moderados e o cardápio e os pedidos recebem requisições constantes. O plano de execução do PostgreSQL (EXPLAIN) revelava `Seq Scan` e `Sort` em consultas frequentes (busca de produto no checkout, cardápio público e pedidos pendentes).
+
+**Impacto:** Redução imediata do custo de execução das queries nos planos do PostgreSQL (`Seq Scan` substituído por `Index Scan` / `Index Only Scan`), alívio de memória evitando operações de Sort, e script idempotente versionado em `scripts/migrate-performance-indexes.mjs` e integrado em `scripts/setup-neon.mjs`.
+

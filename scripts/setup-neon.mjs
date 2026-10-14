@@ -113,9 +113,16 @@ async function main() {
     );
 
     CREATE INDEX IF NOT EXISTS idx_vendas_data ON vendas (data_venda);
+    CREATE INDEX IF NOT EXISTS idx_vendas_data_id ON vendas (data_venda DESC, id DESC);
     CREATE INDEX IF NOT EXISTS idx_vendas_produto ON vendas (produto_id);
     CREATE INDEX IF NOT EXISTS idx_pedidos_status ON pedidos (status);
+    CREATE INDEX IF NOT EXISTS idx_pedidos_pendentes_created ON pedidos (created_at DESC) WHERE status = 'pendente';
     CREATE INDEX IF NOT EXISTS idx_pedido_itens_pedido ON pedido_itens (pedido_id);
+    CREATE INDEX IF NOT EXISTS idx_produtos_nome ON produtos (nome);
+    CREATE INDEX IF NOT EXISTS idx_produtos_cardapio ON produtos (categoria, nome) WHERE ativo = true;
+    CREATE INDEX IF NOT EXISTS idx_insumos_insumo_base_id ON insumos (insumo_base_id);
+    CREATE INDEX IF NOT EXISTS idx_receitas_nome ON receitas (nome);
+    CREATE INDEX IF NOT EXISTS idx_insumo_compras_insumo_data ON insumo_compras (insumo_id, data_compra DESC);
   `);
   
   console.log('Tables created successfully!');
