@@ -11,6 +11,16 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: "/cardapio",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
+

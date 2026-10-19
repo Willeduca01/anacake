@@ -22,7 +22,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 bg-warm-white/95 backdrop-blur-md border-b border-rose-light/70 shadow-xs">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-14 sm:h-16 items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
+          <Link href="/cardapio" className="flex items-center gap-2 group">
             <Image
               src="/logo.png"
               alt="Ana Cake"

@@ -30,7 +30,7 @@ export default function Footer() {
             </h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/" className="hover:text-rose-light transition-colors">
+                <Link href="/cardapio" className="hover:text-rose-light transition-colors">
                   Início
                 </Link>
               </li>

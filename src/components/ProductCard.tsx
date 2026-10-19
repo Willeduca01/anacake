@@ -29,7 +29,7 @@ function StockBadge({ estoque }: { estoque: number }) {
 }
 
 export default function ProductCard({ produto }: { produto: Produto }) {
-  const { itens, adicionar, abrirSacola } = useCart();
+  const { itens, adicionar } = useCart();
   const itemNaSacola = itens.find((i) => i.produto.nome === produto.nome);
   const esgotado = produto.estoque === 0;
 
@@ -37,7 +37,6 @@ export default function ProductCard({ produto }: { produto: Produto }) {
     e.stopPropagation();
     if (esgotado) return;
     adicionar(produto);
-    abrirSacola();
   };
 
   const imagemSrc = fonteImagem(produto);
@@ -96,11 +95,24 @@ export default function ProductCard({ produto }: { produto: Produto }) {
             type="button"
             onClick={handleAdicionar}
             disabled={esgotado}
-            className="rounded-xl px-3 py-1.5 bg-[#C88A8A] hover:bg-[#B77979] text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+            className={`rounded-xl px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 shadow-xs transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+              itemNaSacola
+                ? "bg-[#A76D6D] text-white"
+                : "bg-[#C88A8A] hover:bg-[#B77979] text-white"
+            }`}
             aria-label={`Adicionar ${produto.nome}`}
           >
-            <ShoppingBag className="h-3.5 w-3.5" />
-            <span>{esgotado ? "Esgotado" : "Adicionar"}</span>
+            {itemNaSacola ? (
+              <>
+                <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                <span>Adicionado ({itemNaSacola.quantidade})</span>
+              </>
+            ) : (
+              <>
+                <ShoppingBag className="h-3.5 w-3.5" />
+                <span>{esgotado ? "Esgotado" : "Adicionar"}</span>
+              </>
+            )}
           </button>
         </div>
       </div>

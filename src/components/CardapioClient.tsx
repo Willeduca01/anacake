@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Image from "next/image";
-import { Plus } from "lucide-react";
+import { Plus, Check } from "lucide-react";
 import {
   type Produto,
   formatarPreco,
@@ -23,7 +23,8 @@ export default function CardapioClient({
   produtos,
   categoriaInicial,
 }: CardapioClientProps) {
-  const { adicionar, abrirSacola } = useCart();
+  const { itens, totalItens, totalPrecoFormatado, adicionar, abrirSacola } =
+    useCart();
 
   const categorias = useMemo(
     () => [
@@ -84,7 +85,6 @@ export default function CardapioClient({
     e.stopPropagation();
     if (produto.estoque === 0) return;
     adicionar(produto);
-    abrirSacola();
   };
 
   return (
@@ -112,6 +112,7 @@ export default function CardapioClient({
             {maisPedidos.map((produto) => {
               const imagemSrc = fonteImagem(produto);
               const esgotado = produto.estoque === 0;
+              const itemNaSacola = itens.find((i) => i.produto.nome === produto.nome);
 
               return (
                 <div
@@ -136,6 +137,15 @@ export default function CardapioClient({
                       </span>
                     </div>
 
+                    {itemNaSacola && (
+                      <div className="absolute top-2 right-2 z-10 h-5 min-w-5 rounded-full bg-[#C88A8A] flex items-center justify-center px-1.5 gap-0.5 shadow-sm">
+                        <Check className="h-3 w-3 text-white" />
+                        <span className="text-[10px] font-bold text-white">
+                          {itemNaSacola.quantidade}
+                        </span>
+                      </div>
+                    )}
+
                     {/* Barra inferior / Sobreposição escura transparente */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent flex flex-col justify-end p-2.5 sm:p-3 z-10">
                       <h3 className="text-white font-bold text-xs sm:text-sm line-clamp-1 drop-shadow-sm mb-1">
@@ -149,10 +159,18 @@ export default function CardapioClient({
                           type="button"
                           onClick={(e) => handleAdicionarDestaque(e, produto)}
                           disabled={esgotado}
-                          className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-[#C88A8A] hover:bg-[#B77979] text-white flex items-center justify-center shadow-md active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+                          className={`h-7 w-7 sm:h-8 sm:w-8 rounded-full text-white flex items-center justify-center shadow-md active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed ${
+                            itemNaSacola
+                              ? "bg-[#A76D6D]"
+                              : "bg-[#C88A8A] hover:bg-[#B77979]"
+                          }`}
                           aria-label={`Adicionar ${produto.nome}`}
                         >
-                          <Plus className="h-4 w-4 stroke-[2.5]" />
+                          {itemNaSacola ? (
+                            <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                          ) : (
+                            <Plus className="h-4 w-4 stroke-[2.5]" />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -228,6 +246,27 @@ export default function CardapioClient({
             </button>
           </div>
         )}
+
+      {/* Barra Flutuante Mobile: "Ver Sacola" para quando o cliente terminar de escolher */}
+      {totalItens > 0 && (
+        <aside className="fixed bottom-4 left-3.5 right-3.5 z-40 sm:hidden">
+          <button
+            type="button"
+            onClick={abrirSacola}
+            className="w-full flex items-center justify-between bg-[#4A2B20] text-white px-5 py-3.5 rounded-2xl shadow-xl shadow-black/25 active:scale-[0.98] transition-transform"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[#C88A8A] px-1.5 text-xs font-bold text-white">
+                {totalItens}
+              </span>
+              <span className="text-sm font-semibold">Ver Sacola</span>
+            </div>
+            <span className="text-sm font-extrabold text-[#FDF6F0]">
+              {totalPrecoFormatado}
+            </span>
+          </button>
+        </aside>
+      )}
     </div>
   );
 }
