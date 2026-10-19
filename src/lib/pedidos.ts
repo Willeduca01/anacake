@@ -4,6 +4,7 @@ export interface PedidoItemInput {
   produto_nome: string;
   quantidade: number;
   preco_unit: number;
+  observacao?: string | null;
 }
 
 export interface PedidoItem extends PedidoItemInput {
@@ -134,12 +135,18 @@ export async function criarPedido(
     );
     const pedidoId = pedidoRows[0].id;
 
-    // Inserção dos itens do pedido
-    for (const [nome, info] of mapaItens.entries()) {
+    // Inserção dos itens do pedido (preservando observação específica de cada item)
+    for (const item of validos) {
       await client.query(
-        `INSERT INTO pedido_itens (pedido_id, produto_nome, quantidade, preco_unit)
-         VALUES ($1, $2, $3, $4)`,
-        [pedidoId, nome, info.quantidade, info.preco_unit]
+        `INSERT INTO pedido_itens (pedido_id, produto_nome, quantidade, preco_unit, observacao)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          pedidoId,
+          item.produto_nome.trim(),
+          item.quantidade,
+          item.preco_unit,
+          item.observacao?.trim() || null,
+        ]
       );
     }
 
@@ -171,7 +178,8 @@ export async function listarPedidosPendentes(): Promise<Pedido[]> {
                   'id', i.id,
                   'produto_nome', i.produto_nome,
                   'quantidade', i.quantidade,
-                  'preco_unit', i.preco_unit::float8
+                  'preco_unit', i.preco_unit::float8,
+                  'observacao', i.observacao
                 ) ORDER BY i.id
               ) FILTER (WHERE i.id IS NOT NULL),
               '[]'

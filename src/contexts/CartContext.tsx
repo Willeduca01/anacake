@@ -12,6 +12,7 @@ import { type Produto, formatarPreco } from "@/constants/products";
 export interface ItemSacola {
   produto: Produto;
   quantidade: number;
+  observacao?: string;
 }
 
 interface CartContextType {
@@ -20,7 +21,12 @@ interface CartContextType {
   abrirSacola: () => void;
   fecharSacola: () => void;
   toggleSacola: () => void;
-  adicionar: (produto: Produto, quantidade?: number) => void;
+  adicionar: (
+    produto: Produto,
+    quantidade?: number,
+    observacao?: string
+  ) => void;
+  atualizarObservacao: (nome: string, observacao: string) => void;
   remover: (nome: string) => void;
   incrementar: (nome: string) => void;
   decrementar: (nome: string) => void;
@@ -40,19 +46,43 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const fecharSacola = useCallback(() => setAberta(false), []);
   const toggleSacola = useCallback(() => setAberta((v) => !v), []);
 
-  const adicionar = useCallback((produto: Produto, quantidade = 1) => {
-    const qtd = Math.max(1, quantidade);
-    setItens((prev) => {
-      const existente = prev.find((i) => i.produto.nome === produto.nome);
-      if (existente) {
-        return prev.map((i) =>
-          i.produto.nome === produto.nome
-            ? { ...i, quantidade: i.quantidade + qtd }
-            : i
-        );
-      }
-      return [...prev, { produto, quantidade: qtd }];
-    });
+  const adicionar = useCallback(
+    (produto: Produto, quantidade = 1, observacao?: string) => {
+      const qtd = Math.max(1, quantidade);
+      setItens((prev) => {
+        const existente = prev.find((i) => i.produto.nome === produto.nome);
+        if (existente) {
+          return prev.map((i) =>
+            i.produto.nome === produto.nome
+              ? {
+                  ...i,
+                  quantidade: i.quantidade + qtd,
+                  observacao: observacao?.trim() || i.observacao,
+                }
+              : i
+          );
+        }
+        return [
+          ...prev,
+          {
+            produto,
+            quantidade: qtd,
+            observacao: observacao?.trim() || undefined,
+          },
+        ];
+      });
+    },
+    []
+  );
+
+  const atualizarObservacao = useCallback((nome: string, observacao: string) => {
+    setItens((prev) =>
+      prev.map((i) =>
+        i.produto.nome === nome
+          ? { ...i, observacao: observacao }
+          : i
+      )
+    );
   }, []);
 
   const remover = useCallback((nome: string) => {
@@ -101,6 +131,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         fecharSacola,
         toggleSacola,
         adicionar,
+        atualizarObservacao,
         remover,
         incrementar,
         decrementar,

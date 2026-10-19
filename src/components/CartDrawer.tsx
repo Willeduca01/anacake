@@ -10,6 +10,7 @@ import {
   ShoppingBag,
   AlertCircle,
   Loader2,
+  FileText,
 } from "lucide-react";
 import Image from "next/image";
 import { useCart } from "@/contexts/CartContext";
@@ -25,6 +26,7 @@ export default function CartDrawer() {
     incrementar,
     decrementar,
     remover,
+    atualizarObservacao,
     limpar,
     totalItens,
     totalPrecoFormatado,
@@ -33,6 +35,7 @@ export default function CartDrawer() {
   const [nome, setNome] = useState("");
   const [metodo, setMetodo] = useState<string>(METODOS_PAGAMENTO[0]);
   const [enviando, setEnviando] = useState(false);
+  const [obsAberta, setObsAberta] = useState<Record<string, boolean>>({});
   const [alertaEstoque, setAlertaEstoque] = useState<{
     itemNome: string;
     mensagem?: string;
@@ -50,10 +53,11 @@ export default function CartDrawer() {
       const res = await criarPedidoAction({
         cliente_nome: nome,
         metodo_pagamento: metodo,
-        itens: itens.map(({ produto, quantidade }) => ({
+        itens: itens.map(({ produto, quantidade, observacao }) => ({
           produto_nome: produto.nome,
           quantidade,
           preco_unit: produto.preco,
+          observacao: observacao?.trim() || null,
         })),
       });
 
@@ -196,60 +200,128 @@ export default function CartDrawer() {
             ) : (
               <>
                 <ul className="flex-1 overflow-y-auto divide-y divide-rose-light/60 px-6">
-                  {itens.map(({ produto, quantidade }) => (
-                    <li key={produto.nome} className="py-4 flex gap-4">
-                      <div className="relative h-16 w-16 flex-shrink-0 rounded-xl overflow-hidden bg-cream">
-                        <Image
-                          src={fonteImagem(produto)}
-                          alt={produto.nome}
-                          fill
-                          unoptimized={fonteImagem(produto).startsWith("/api/")}
-                          className="object-cover"
-                          sizes="64px"
-                        />
-                      </div>
+                  {itens.map(({ produto, quantidade, observacao }) => {
+                    const temObs = Boolean(
+                      observacao && observacao.trim().length > 0
+                    );
+                    const aberta = obsAberta[produto.nome] || temObs;
 
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-semibold text-chocolate truncate">
-                          {produto.nome}
-                        </h3>
-                        <p className="text-xs text-chocolate-muted mt-0.5">
-                          {formatarPreco(produto.preco)} cada
-                        </p>
-                        <p className="text-sm font-bold text-chocolate mt-1">
-                          {formatarPreco(produto.preco * quantidade)}
-                        </p>
-                      </div>
+                    return (
+                      <li key={produto.nome} className="py-3.5 space-y-2">
+                        <div className="flex gap-3.5">
+                          <div className="relative h-16 w-16 flex-shrink-0 rounded-xl overflow-hidden bg-cream border border-[#F3E8E2]">
+                            <Image
+                              src={fonteImagem(produto)}
+                              alt={produto.nome}
+                              fill
+                              unoptimized={fonteImagem(produto).startsWith("/api/")}
+                              className="object-cover"
+                              sizes="64px"
+                            />
+                          </div>
 
-                      <div className="flex flex-col items-end justify-between">
-                        <button
-                          onClick={() => remover(produto.nome)}
-                          className="p-1 text-chocolate-muted hover:text-red-500 transition-colors"
-                          aria-label="Remover item"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-chocolate truncate">
+                              {produto.nome}
+                            </h3>
+                            <p className="text-xs text-chocolate-muted mt-0.5">
+                              {formatarPreco(produto.preco)} cada
+                            </p>
+                            <p className="text-sm font-bold text-chocolate mt-1">
+                              {formatarPreco(produto.preco * quantidade)}
+                            </p>
+                          </div>
 
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => decrementar(produto.nome)}
-                            className="h-7 w-7 rounded-lg border border-rose-light flex items-center justify-center text-chocolate-muted hover:bg-rose-light transition-colors"
-                          >
-                            <Minus className="h-3 w-3" />
-                          </button>
-                          <span className="w-8 text-center text-sm font-semibold text-chocolate">
-                            {quantidade}
-                          </span>
-                          <button
-                            onClick={() => incrementar(produto.nome)}
-                            className="h-7 w-7 rounded-lg border border-rose-light flex items-center justify-center text-chocolate-muted hover:bg-rose-light transition-colors"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
+                          <div className="flex flex-col items-end justify-between">
+                            <button
+                              type="button"
+                              onClick={() => remover(produto.nome)}
+                              className="p-1 text-chocolate-muted hover:text-red-500 transition-colors"
+                              aria-label="Remover item"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => decrementar(produto.nome)}
+                                className="h-7 w-7 rounded-lg border border-rose-light flex items-center justify-center text-chocolate-muted hover:bg-rose-light transition-colors"
+                              >
+                                <Minus className="h-3 w-3" />
+                              </button>
+                              <span className="w-8 text-center text-sm font-semibold text-chocolate">
+                                {quantidade}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => incrementar(produto.nome)}
+                                className="h-7 w-7 rounded-lg border border-rose-light flex items-center justify-center text-chocolate-muted hover:bg-rose-light transition-colors"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </li>
-                  ))}
+
+                        {/* Campo de Observação / Anotação do Item */}
+                        <div className="pt-0.5">
+                          {aberta ? (
+                            <div className="space-y-1.5 bg-[#FAF6F2]/90 rounded-xl p-2.5 border border-rose-light/80 shadow-2xs">
+                              <div className="flex items-center justify-between text-[11px] font-semibold text-[#8B6E60]">
+                                <span className="flex items-center gap-1">
+                                  <FileText className="h-3.5 w-3.5 text-[#C88A8A]" />
+                                  Anotação para este item:
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    atualizarObservacao(produto.nome, "");
+                                    setObsAberta((prev) => ({
+                                      ...prev,
+                                      [produto.nome]: false,
+                                    }));
+                                  }}
+                                  className="text-[10px] text-chocolate-muted hover:text-red-500 transition-colors font-medium"
+                                >
+                                  Remover nota
+                                </button>
+                              </div>
+                              <input
+                                type="text"
+                                value={observacao || ""}
+                                onChange={(e) =>
+                                  atualizarObservacao(
+                                    produto.nome,
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Ex: sem canela, bem geladinho, para presente..."
+                                maxLength={140}
+                                className="w-full text-xs rounded-lg border border-rose-light bg-white px-2.5 py-1.5 text-chocolate placeholder:text-chocolate-muted/50 focus:border-[#C88A8A] focus:outline-none focus:ring-1 focus:ring-[#C88A8A]/30 transition-all"
+                              />
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setObsAberta((prev) => ({
+                                  ...prev,
+                                  [produto.nome]: true,
+                                }))
+                              }
+                              className="text-[11px] font-medium text-[#C88A8A] hover:text-[#B77979] flex items-center gap-1.5 py-0.5 transition-colors group"
+                            >
+                              <FileText className="h-3 w-3 text-[#C88A8A] group-hover:scale-110 transition-transform" />
+                              <span className="underline decoration-dashed underline-offset-2">
+                                Adicionar observação / nota
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
 
                 <div className="border-t border-rose-light px-6 py-5 space-y-4">
@@ -332,18 +404,26 @@ export default function CartDrawer() {
 }
 
 function montarMensagem(
-  itens: { produto: { nome: string; preco: number }; quantidade: number }[],
+  itens: {
+    produto: { nome: string; preco: number };
+    quantidade: number;
+    observacao?: string;
+  }[],
   total: string,
   nome?: string,
   metodo?: string
 ): string {
-  const linhas = itens.map(
-    ({ produto, quantidade }) =>
-      `• ${quantidade}x ${produto.nome} — ${formatarPreco(produto.preco * quantidade)}`
-  );
-  const saudacao = nome && nome.trim()
-    ? `Olá! Aqui é ${nome.trim()}. Gostaria de fazer o seguinte pedido:`
-    : "Olá! Gostaria de fazer o seguinte pedido:";
+  const linhas = itens.map(({ produto, quantidade, observacao }) => {
+    const obsTexto =
+      observacao && observacao.trim()
+        ? `\n   ↳ _Obs: ${observacao.trim()}_`
+        : "";
+    return `• ${quantidade}x ${produto.nome} — ${formatarPreco(produto.preco * quantidade)}${obsTexto}`;
+  });
+  const saudacao =
+    nome && nome.trim()
+      ? `Olá! Aqui é ${nome.trim()}. Gostaria de fazer o seguinte pedido:`
+      : "Olá! Gostaria de fazer o seguinte pedido:";
   const pagamento = metodo ? `\n*Pagamento: ${metodo}*` : "";
   return `${saudacao}\n\n${linhas.join("\n")}\n\n*Total: ${total}*${pagamento}`;
 }

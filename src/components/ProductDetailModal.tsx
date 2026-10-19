@@ -18,15 +18,18 @@ export default function ProductDetailModal({
 }: ProductDetailModalProps) {
   const { itens, adicionar } = useCart();
   const [quantidade, setQuantidade] = useState(1);
+  const [observacao, setObservacao] = useState("");
   const [adicionado, setAdicionado] = useState(false);
 
-  // Reseta quantidade e feedback quando o produto selecionado muda
+  // Reseta quantidade, observação e feedback quando o produto selecionado muda
   useEffect(() => {
     if (produto) {
       setQuantidade(1);
       setAdicionado(false);
+      const existente = itens.find((i) => i.produto.nome === produto.nome);
+      setObservacao(existente?.observacao || "");
     }
-  }, [produto]);
+  }, [produto, itens]);
 
   // Trava a rolagem da página de fundo enquanto o modal estiver aberto
   useEffect(() => {
@@ -64,7 +67,7 @@ export default function ProductDetailModal({
 
   const handleAdicionarAoCarrinho = () => {
     if (esgotado || adicionado) return;
-    adicionar(produto, quantidade);
+    adicionar(produto, quantidade, observacao);
     setAdicionado(true);
     setTimeout(() => {
       onClose();
@@ -175,6 +178,27 @@ export default function ProductDetailModal({
                   `Delicioso doce artesanal de ${produto.categoria}. Preparado artesanalmente com ingredientes de alta qualidade e todo o carinho da confeitaria Ana Cake.`}
               </p>
             </div>
+
+            {/* Campo de observação / anotação específica para este produto */}
+            {!esgotado && (
+              <div className="pt-2 border-t border-[#F8EFEA] space-y-1.5">
+                <label
+                  htmlFor="modal-observacao"
+                  className="block text-xs font-bold uppercase tracking-wider text-[#8B6E60]"
+                >
+                  Alguma observação ou preferência? (opcional)
+                </label>
+                <input
+                  id="modal-observacao"
+                  type="text"
+                  value={observacao}
+                  onChange={(e) => setObservacao(e.target.value)}
+                  placeholder="Ex: sem canela, bem gelado, escrever nome..."
+                  maxLength={150}
+                  className="w-full text-xs sm:text-sm rounded-xl border border-[#E8D8CF] bg-[#FAF6F2]/70 px-3.5 py-2 text-[#4A2B20] placeholder:text-[#8B6E60]/50 focus:border-[#C88A8A] focus:outline-none focus:ring-1 focus:ring-[#C88A8A]/30 transition-all"
+                />
+              </div>
+            )}
 
             {/* Aviso caso o item já esteja na sacola */}
             {itemNaSacola && (

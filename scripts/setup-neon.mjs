@@ -100,8 +100,10 @@ async function main() {
       pedido_id INT NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
       produto_nome VARCHAR(255) NOT NULL,
       quantidade INT NOT NULL,
-      preco_unit NUMERIC(10, 2) NOT NULL
+      preco_unit NUMERIC(10, 2) NOT NULL,
+      observacao TEXT
     );
+    ALTER TABLE pedido_itens ADD COLUMN IF NOT EXISTS observacao TEXT;
 
     CREATE TABLE IF NOT EXISTS vendas (
       id SERIAL PRIMARY KEY,

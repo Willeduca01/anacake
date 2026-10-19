@@ -59,18 +59,22 @@ export default function PedidoCard({ pedido }: { pedido: Pedido }) {
         </span>
       </div>
 
-      <ul className="my-4 space-y-1.5 border-y border-rose-light/60 py-3">
+      <ul className="my-4 space-y-2 border-y border-rose-light/60 py-3">
         {pedido.itens.map((item) => (
-          <li
-            key={item.id}
-            className="flex items-center justify-between text-sm"
-          >
-            <span className="text-chocolate">
-              {item.quantidade}× {item.produto_nome}
-            </span>
-            <span className="text-chocolate-muted">
-              {brl(item.preco_unit * item.quantidade)}
-            </span>
+          <li key={item.id} className="text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-chocolate">
+                {item.quantidade}× {item.produto_nome}
+              </span>
+              <span className="text-chocolate-muted">
+                {brl(item.preco_unit * item.quantidade)}
+              </span>
+            </div>
+            {item.observacao && (
+              <p className="mt-0.5 text-xs text-rose-pastel italic bg-rose-50/70 rounded-md px-2 py-0.5">
+                Obs: {item.observacao}
+              </p>
+            )}
           </li>
         ))}
       </ul>

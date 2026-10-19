@@ -67,6 +67,9 @@ export async function criarPedidoAction(
         produto_nome: sanitizarTexto(i.produto_nome).slice(0, 200),
         quantidade: Math.min(Math.trunc(Number(i.quantidade)), 999),
         preco_unit: Math.max(Number(i.preco_unit) || 0, 0),
+        observacao: i.observacao
+          ? sanitizarTexto(i.observacao).slice(0, 300)
+          : null,
       }))
       .filter((i) => i.produto_nome.length > 0 && i.quantidade > 0);
 
