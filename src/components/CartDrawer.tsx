@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Minus, Trash2, ShoppingBag } from "lucide-react";
+import {
+  X,
+  Plus,
+  Minus,
+  Trash2,
+  ShoppingBag,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 import Image from "next/image";
 import { useCart } from "@/contexts/CartContext";
 import { formatarPreco, fonteImagem } from "@/constants/products";
@@ -24,27 +32,67 @@ export default function CartDrawer() {
 
   const [nome, setNome] = useState("");
   const [metodo, setMetodo] = useState<string>(METODOS_PAGAMENTO[0]);
+  const [enviando, setEnviando] = useState(false);
+  const [alertaEstoque, setAlertaEstoque] = useState<{
+    itemNome: string;
+    mensagem?: string;
+  } | null>(null);
+  const [erroCheckout, setErroCheckout] = useState<string | null>(null);
 
-  const enviarPedido = () => {
-    const waUrl = `https://wa.me/5519978293375?text=${encodeURIComponent(
-      montarMensagem(itens, totalPrecoFormatado, nome, metodo)
-    )}`;
-    // Abre o WhatsApp de forma sincrona (dentro do gesto do usuario) para
-    // nao ser bloqueado por popup, e registra o pedido em segundo plano.
-    window.open(waUrl, "_blank", "noopener,noreferrer");
-    void criarPedidoAction({
-      cliente_nome: nome,
-      metodo_pagamento: metodo,
-      itens: itens.map(({ produto, quantidade }) => ({
-        produto_nome: produto.nome,
-        quantidade,
-        preco_unit: produto.preco,
-      })),
-    }).catch(() => {});
-    setNome("");
-    setMetodo(METODOS_PAGAMENTO[0]);
-    limpar();
-    fecharSacola();
+  const enviarPedido = async () => {
+    if (enviando || itens.length === 0) return;
+
+    setEnviando(true);
+    setAlertaEstoque(null);
+    setErroCheckout(null);
+
+    try {
+      const res = await criarPedidoAction({
+        cliente_nome: nome,
+        metodo_pagamento: metodo,
+        itens: itens.map(({ produto, quantidade }) => ({
+          produto_nome: produto.nome,
+          quantidade,
+          preco_unit: produto.preco,
+        })),
+      });
+
+      if (!res.success) {
+        if (res.error === "OUT_OF_STOCK" && res.itemNome) {
+          // Trata o erro 'OUT_OF_STOCK': remove apenas o produto esgotado sem resetar os demais
+          remover(res.itemNome);
+          setAlertaEstoque({
+            itemNome: res.itemNome,
+            mensagem: res.message,
+          });
+        } else {
+          setErroCheckout(res.message || "Não foi possível finalizar o pedido.");
+        }
+        setEnviando(false);
+        return;
+      }
+
+      // Sucesso na reserva e criação do pedido: abrir WhatsApp com a mensagem
+      const waUrl = `https://wa.me/5519978293375?text=${encodeURIComponent(
+        montarMensagem(itens, totalPrecoFormatado, nome, metodo)
+      )}`;
+
+      const win = window.open(waUrl, "_blank", "noopener,noreferrer");
+      if (!win) {
+        window.location.href = waUrl;
+      }
+
+      setNome("");
+      setMetodo(METODOS_PAGAMENTO[0]);
+      limpar();
+      fecharSacola();
+    } catch {
+      setErroCheckout(
+        "Falha na comunicação ao processar seu pedido. Tente novamente."
+      );
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
@@ -83,6 +131,54 @@ export default function CartDrawer() {
                 <X className="h-5 w-5" />
               </button>
             </div>
+
+            {alertaEstoque && (
+              <div className="mx-6 mt-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-3 shadow-sm">
+                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-amber-900 text-sm">
+                    Item indisponível no momento
+                  </p>
+                  <p className="mt-1 text-amber-800 leading-relaxed">
+                    O produto{" "}
+                    <strong className="font-bold underline text-amber-950">
+                      {alertaEstoque.itemNome}
+                    </strong>{" "}
+                    acabou de esgotar ou não possui estoque suficiente e foi removido da sua sacola. Os demais itens continuam salvos!
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAlertaEstoque(null)}
+                  className="text-amber-600 hover:text-amber-800 p-1"
+                  aria-label="Fechar aviso de estoque"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {erroCheckout && (
+              <div className="mx-6 mt-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-900 text-xs flex items-start gap-3 shadow-sm">
+                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-red-900 text-sm">
+                    Não foi possível concluir
+                  </p>
+                  <p className="mt-1 text-red-800 leading-relaxed">
+                    {erroCheckout}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setErroCheckout(null)}
+                  className="text-red-500 hover:text-red-700 p-1"
+                  aria-label="Fechar erro"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
 
             {itens.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 text-center">
@@ -207,14 +303,21 @@ export default function CartDrawer() {
 
                   <button
                     onClick={enviarPedido}
-                    className="block w-full rounded-full bg-rose-pastel py-3 text-center text-sm font-semibold text-white shadow-lg shadow-rose-pastel/30 hover:bg-chocolate-light transition-colors"
+                    disabled={enviando || itens.length === 0}
+                    className="flex items-center justify-center gap-2 w-full rounded-full bg-rose-pastel py-3 text-center text-sm font-semibold text-white shadow-lg shadow-rose-pastel/30 hover:bg-chocolate-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    Enviar Pedido via WhatsApp
+                    {enviando && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {enviando ? "Verificando estoque..." : "Enviar Pedido via WhatsApp"}
                   </button>
 
                   <button
-                    onClick={limpar}
-                    className="block w-full rounded-full border border-rose-light py-2.5 text-center text-sm font-medium text-chocolate-muted hover:bg-rose-light transition-colors"
+                    onClick={() => {
+                      setAlertaEstoque(null);
+                      setErroCheckout(null);
+                      limpar();
+                    }}
+                    disabled={enviando}
+                    className="block w-full rounded-full border border-rose-light py-2.5 text-center text-sm font-medium text-chocolate-muted hover:bg-rose-light transition-colors disabled:opacity-50"
                   >
                     Limpar Sacola
                   </button>

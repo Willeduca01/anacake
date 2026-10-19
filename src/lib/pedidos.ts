@@ -28,16 +28,26 @@ export class PedidoVazioError extends Error {
 }
 
 export class ProdutoNaoEncontradoError extends Error {
+  readonly itemNome: string;
   constructor(nome: string) {
-    super(`Produto "${nome}" não encontrado no cardápio (pode ter sido renomeado/removido).`);
+    super(`Produto "${nome}" não encontrado no cardápio ou indisponível.`);
     this.name = "ProdutoNaoEncontradoError";
+    this.itemNome = nome;
   }
 }
 
 export class EstoqueInsuficientePedidoError extends Error {
+  readonly itemNome: string;
+  readonly disponivel: number;
   constructor(nome: string, disponivel: number) {
-    super(`Estoque insuficiente de "${nome}" (disponível: ${disponivel}).`);
+    super(
+      disponivel > 0
+        ? `Estoque insuficiente de "${nome}" (disponível: ${disponivel}).`
+        : `O produto "${nome}" está esgotado no momento.`
+    );
     this.name = "EstoqueInsuficientePedidoError";
+    this.itemNome = nome;
+    this.disponivel = disponivel;
   }
 }
 
@@ -51,26 +61,85 @@ export async function criarPedido(
   );
   if (validos.length === 0) throw new PedidoVazioError();
 
+  // Consolidar quantidades caso haja itens repetidos na sacola
+  const mapaItens = new Map<string, { quantidade: number; preco_unit: number }>();
+  for (const item of validos) {
+    const nome = item.produto_nome.trim();
+    const atual = mapaItens.get(nome);
+    if (atual) {
+      atual.quantidade += Math.trunc(item.quantidade);
+    } else {
+      mapaItens.set(nome, {
+        quantidade: Math.trunc(item.quantidade),
+        preco_unit: item.preco_unit,
+      });
+    }
+  }
+
+  // Ordenar nomes alfabeticamente para ordenação determinística de lock e evitar deadlocks concorrentes
+  const nomesOrdenados = Array.from(mapaItens.keys()).sort((a, b) =>
+    a.localeCompare(b)
+  );
+
   const total = Number(
-    validos
-      .reduce((acc, i) => acc + i.preco_unit * i.quantidade, 0)
+    Array.from(mapaItens.entries())
+      .reduce((acc, [, i]) => acc + i.preco_unit * i.quantidade, 0)
       .toFixed(2)
   );
 
   const client = await getPool().connect();
   try {
     await client.query("BEGIN");
-    const { rows } = await client.query<{ id: number }>(
+
+    // Trava de concorrência com SELECT ... FOR UPDATE e dedução condicional atômica
+    for (const nome of nomesOrdenados) {
+      const itemInfo = mapaItens.get(nome)!;
+
+      const { rows: prodRows } = await client.query<{
+        id: number;
+        estoque_atual: number;
+        ativo: boolean;
+      }>(
+        `SELECT id, estoque_atual, ativo FROM produtos WHERE nome = $1 FOR UPDATE`,
+        [nome]
+      );
+
+      if (prodRows.length === 0) {
+        throw new ProdutoNaoEncontradoError(nome);
+      }
+
+      const prod = prodRows[0];
+      if (!prod.ativo || prod.estoque_atual < itemInfo.quantidade) {
+        throw new EstoqueInsuficientePedidoError(nome, prod.estoque_atual);
+      }
+
+      // Dedução atômica condicional de estoque
+      const updateRes = await client.query<{ estoque_atual: number }>(
+        `UPDATE produtos 
+         SET estoque_atual = estoque_atual - $1 
+         WHERE id = $2 AND estoque_atual >= $1 
+         RETURNING estoque_atual`,
+        [itemInfo.quantidade, prod.id]
+      );
+
+      if (updateRes.rowCount === 0) {
+        throw new EstoqueInsuficientePedidoError(nome, prod.estoque_atual);
+      }
+    }
+
+    // Criação do registro do pedido
+    const { rows: pedidoRows } = await client.query<{ id: number }>(
       `INSERT INTO pedidos (cliente_nome, metodo_pagamento, total) VALUES ($1, $2, $3) RETURNING id`,
       [clienteNome, metodoPagamento, total]
     );
-    const pedidoId = rows[0].id;
+    const pedidoId = pedidoRows[0].id;
 
-    for (const item of validos) {
+    // Inserção dos itens do pedido
+    for (const [nome, info] of mapaItens.entries()) {
       await client.query(
         `INSERT INTO pedido_itens (pedido_id, produto_nome, quantidade, preco_unit)
          VALUES ($1, $2, $3, $4)`,
-        [pedidoId, item.produto_nome, Math.trunc(item.quantidade), item.preco_unit]
+        [pedidoId, nome, info.quantidade, info.preco_unit]
       );
     }
 
@@ -152,31 +221,19 @@ export async function confirmarPedido(pedidoId: number): Promise<void> {
     );
 
     for (const item of itens) {
-      const { rows: prod } = await client.query<{
-        id: number;
-        estoque_atual: number;
-      }>(
-        `SELECT id, estoque_atual FROM produtos WHERE nome = $1 FOR UPDATE`,
+      const { rows: prod } = await client.query<{ id: number }>(
+        `SELECT id FROM produtos WHERE nome = $1`,
         [item.produto_nome]
       );
-      if (prod.length === 0) {
-        throw new ProdutoNaoEncontradoError(item.produto_nome);
-      }
-      const { id: produtoId, estoque_atual } = prod[0];
-      if (estoque_atual < item.quantidade) {
-        throw new EstoqueInsuficientePedidoError(item.produto_nome, estoque_atual);
-      }
-
+      const produtoId = prod.length > 0 ? prod[0].id : null;
       const valorTotal = Number((item.preco_unit * item.quantidade).toFixed(2));
+
       await client.query(
         `INSERT INTO vendas (produto_id, quantidade, valor_total, metodo_pagamento)
          VALUES ($1, $2, $3, $4)`,
         [produtoId, item.quantidade, valorTotal, metodoPagamento]
       );
-      await client.query(
-        `UPDATE produtos SET estoque_atual = estoque_atual - $1 WHERE id = $2`,
-        [item.quantidade, produtoId]
-      );
+      // Nota: A dedução de estoque_atual foi realizada atomicamente na criação do pedido no checkout
     }
 
     await client.query(
@@ -194,8 +251,49 @@ export async function confirmarPedido(pedidoId: number): Promise<void> {
 }
 
 export async function recusarPedido(pedidoId: number): Promise<void> {
-  await getPool().query(
-    `UPDATE pedidos SET status = 'recusado' WHERE id = $1 AND status = 'pendente'`,
-    [pedidoId]
-  );
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows: pedidoRows } = await client.query<{ status: string }>(
+      `SELECT status FROM pedidos WHERE id = $1 FOR UPDATE`,
+      [pedidoId]
+    );
+    if (pedidoRows.length === 0) {
+      await client.query("ROLLBACK");
+      throw new Error("Pedido não encontrado.");
+    }
+    if (pedidoRows[0].status !== "pendente") {
+      await client.query("ROLLBACK");
+      throw new Error("Pedido já processado.");
+    }
+
+    const { rows: itens } = await client.query<{
+      produto_nome: string;
+      quantidade: number;
+    }>(
+      `SELECT produto_nome, quantidade FROM pedido_itens WHERE pedido_id = $1`,
+      [pedidoId]
+    );
+
+    // Devolve o estoque que foi reservado atomicamente na criação do pedido no checkout
+    for (const item of itens) {
+      await client.query(
+        `UPDATE produtos SET estoque_atual = estoque_atual + $1 WHERE nome = $2`,
+        [item.quantidade, item.produto_nome]
+      );
+    }
+
+    await client.query(
+      `UPDATE pedidos SET status = 'recusado' WHERE id = $1`,
+      [pedidoId]
+    );
+
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }

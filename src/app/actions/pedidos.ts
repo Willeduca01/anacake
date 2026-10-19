@@ -1,6 +1,12 @@
 "use server";
 
-import { criarPedido, type PedidoItemInput } from "@/lib/pedidos";
+import {
+  criarPedido,
+  EstoqueInsuficientePedidoError,
+  ProdutoNaoEncontradoError,
+  PedidoVazioError,
+  type PedidoItemInput,
+} from "@/lib/pedidos";
 import { metodoValido } from "@/constants/pagamento";
 import { obterClientIp, verificarRateLimitPedidos } from "@/lib/ratelimit";
 import { sanitizarTexto } from "@/lib/sanitize";
@@ -11,10 +17,22 @@ export interface CriarPedidoPayload {
   itens: PedidoItemInput[];
 }
 
-export interface CriarPedidoResponse {
-  ok: boolean;
-  message?: string;
-}
+export type CriarPedidoResponse =
+  | { success: true; ok: true; pedidoId?: number }
+  | {
+      success: false;
+      ok: false;
+      error: "OUT_OF_STOCK";
+      itemNome: string;
+      message: string;
+    }
+  | {
+      success: false;
+      ok: false;
+      error?: Exclude<string, "OUT_OF_STOCK">;
+      itemNome?: never;
+      message: string;
+    };
 
 export async function criarPedidoAction(
   payload: CriarPedidoPayload
@@ -25,8 +43,10 @@ export async function criarPedidoAction(
     const rateLimit = await verificarRateLimitPedidos(ip);
     if (!rateLimit.success) {
       return {
+        success: false,
         ok: false,
-        message: "Limite de pedidos atingido. Aguarde alguns instantes antes de tentar novamente.",
+        message:
+          "Limite de pedidos atingido. Aguarde alguns instantes antes de tentar novamente.",
       };
     }
 
@@ -51,12 +71,46 @@ export async function criarPedidoAction(
       .filter((i) => i.produto_nome.length > 0 && i.quantidade > 0);
 
     if (itens.length === 0) {
-      return { ok: false, message: "Pedido sem itens válidos." };
+      return {
+        success: false,
+        ok: false,
+        message: "Pedido sem itens válidos.",
+      };
     }
 
-    await criarPedido(nome, metodo, itens);
-    return { ok: true };
-  } catch {
-    return { ok: false, message: "Erro interno ao processar o pedido." };
+    const pedidoId = await criarPedido(nome, metodo, itens);
+    return { success: true, ok: true, pedidoId };
+  } catch (err: unknown) {
+    if (err instanceof EstoqueInsuficientePedidoError) {
+      return {
+        success: false,
+        ok: false,
+        error: "OUT_OF_STOCK",
+        itemNome: err.itemNome,
+        message: err.message,
+      };
+    }
+    if (err instanceof ProdutoNaoEncontradoError) {
+      return {
+        success: false,
+        ok: false,
+        error: "OUT_OF_STOCK",
+        itemNome: err.itemNome,
+        message: err.message,
+      };
+    }
+    if (err instanceof PedidoVazioError) {
+      return {
+        success: false,
+        ok: false,
+        message: err.message,
+      };
+    }
+    return {
+      success: false,
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Erro interno ao processar o pedido.",
+    };
   }
 }
