@@ -5,7 +5,7 @@ import { MapPin, Clock, ExternalLink } from "lucide-react";
 
 export default function LocationSection() {
   const enderecoGoogle = encodeURI(
-    "https://www.google.com/maps/place/R. Bento de Pinha, 225, Monte Mor - SP, 13190-000"
+    "https://www.google.com/maps/place/R. Bento de Pinha, 225, Monte Mor - SP, 13197-178"
   );
 
   return (
@@ -38,7 +38,7 @@ export default function LocationSection() {
                   <p className="text-sm text-chocolate-muted leading-relaxed">
                     R. Bento de Pinha, 225
                     <br />
-                    Monte Mor — SP, 13190-000
+                    Monte Mor — SP, 13197-178
                   </p>
                 </div>
               </div>
@@ -50,11 +50,13 @@ export default function LocationSection() {
                 <div>
                   <h3 className="font-semibold text-chocolate mb-1">Horário</h3>
                   <p className="text-sm text-chocolate-muted leading-relaxed">
-                    Seg a Sex: 9h — 19h
+                    Seg a Qui: 9h — 18h
                     <br />
-                    Sáb: 9h — 16h
+                    Sex: 9h — 16h
                     <br />
-                    Dom: Fechado
+                    Sáb: Fechado
+                    <br />
+                    Dom: 9h — 17h
                   </p>
                 </div>
               </div>
