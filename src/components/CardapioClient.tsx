@@ -1,10 +1,17 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { type Produto } from "@/constants/products";
+import Image from "next/image";
+import { Plus } from "lucide-react";
+import {
+  type Produto,
+  formatarPreco,
+  fonteImagem,
+  iconePorCategoria,
+} from "@/constants/products";
 import MenuFilter from "@/components/MenuFilter";
 import ProductCard from "@/components/ProductCard";
+import { useCart } from "@/contexts/CartContext";
 import { sanitizarTexto } from "@/lib/sanitize";
 
 interface CardapioClientProps {
@@ -16,8 +23,12 @@ export default function CardapioClient({
   produtos,
   categoriaInicial,
 }: CardapioClientProps) {
+  const { adicionar, abrirSacola } = useCart();
+
   const categorias = useMemo(
-    () => [...new Set(produtos.map((p) => sanitizarTexto(p.categoria) || "Outros"))],
+    () => [
+      ...new Set(produtos.map((p) => sanitizarTexto(p.categoria) || "Outros")),
+    ],
     [produtos]
   );
 
@@ -30,7 +41,9 @@ export default function CardapioClient({
     return encontrada || "Todos";
   });
 
-  const [prevCategoriaInicial, setPrevCategoriaInicial] = useState(categoriaInicial);
+  const [prevCategoriaInicial, setPrevCategoriaInicial] = useState(
+    categoriaInicial
+  );
 
   if (categoriaInicial !== prevCategoriaInicial) {
     setPrevCategoriaInicial(categoriaInicial);
@@ -47,14 +60,37 @@ export default function CardapioClient({
 
   const filtroSanitizado = sanitizarTexto(filtro) || "Todos";
 
-  const produtosFiltrados =
-    filtroSanitizado === "Todos"
-      ? produtos
-      : produtos.filter((p) => (sanitizarTexto(p.categoria) || "Outros") === filtroSanitizado);
+  // Produtos mais pedidos (destaques do topo)
+  const maisPedidos = useMemo(() => {
+    return produtos.slice(0, 6);
+  }, [produtos]);
+
+  // Agrupamento por categoria para exibição limpa em seções
+  const produtosPorCategoria = useMemo(() => {
+    const map = new Map<string, Produto[]>();
+    for (const cat of categorias) {
+      map.set(cat, []);
+    }
+    for (const p of produtos) {
+      const cat = sanitizarTexto(p.categoria) || "Outros";
+      const lista = map.get(cat) ?? [];
+      lista.push(p);
+      map.set(cat, lista);
+    }
+    return map;
+  }, [categorias, produtos]);
+
+  const handleAdicionarDestaque = (e: React.MouseEvent, produto: Produto) => {
+    e.stopPropagation();
+    if (produto.estoque === 0) return;
+    adicionar(produto);
+    abrirSacola();
+  };
 
   return (
-    <>
-      <div className="mb-10">
+    <div className="space-y-6">
+      {/* 2. Barra de Categorias em Chips / Pílulas */}
+      <div className="sticky top-14 sm:top-16 z-30 bg-warm-white/95 backdrop-blur-md py-2.5 -mx-3.5 px-3.5 sm:mx-0 sm:px-0 border-b border-rose-light/50">
         <MenuFilter
           categorias={categorias}
           filtroAtivo={filtro}
@@ -62,32 +98,136 @@ export default function CardapioClient({
         />
       </div>
 
-      <AnimatePresence mode="popLayout">
-        <motion.div
-          key={filtro}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {produtosFiltrados.map((produto) => (
-            <ProductCard key={produto.nome} produto={produto} />
-          ))}
-        </motion.div>
-      </AnimatePresence>
+      {/* 3. Seção "Mais Pedidos" (Carrossel Horizontal) - Exibida quando em Todos ou no topo geral */}
+      {filtroSanitizado === "Todos" && maisPedidos.length > 0 && (
+        <section className="space-y-3 pt-1">
+          <div className="flex items-center gap-3">
+            <h2 className="text-base sm:text-lg font-bold text-[#4A2B20] flex items-center gap-1.5 whitespace-nowrap">
+              <span>🏆</span> Mais Pedidos
+            </h2>
+            <div className="h-px flex-1 bg-[#EAD8D0]" />
+          </div>
 
-      {produtosFiltrados.length === 0 && (
-        <div className="text-center text-chocolate-muted mt-12 space-y-2">
-          <p className="font-semibold text-chocolate">
-            Nenhum produto encontrado nesta categoria no momento.
-          </p>
-          <button
-            onClick={() => setFiltro("Todos")}
-            className="text-xs text-rose-pastel font-semibold hover:underline"
-          >
-            Ver todos os produtos do cardápio
-          </button>
-        </div>
+          <div className="flex gap-3 overflow-x-auto no-scrollbar scrollbar-none pb-2 pt-0.5 px-0.5">
+            {maisPedidos.map((produto) => {
+              const imagemSrc = fonteImagem(produto);
+              const esgotado = produto.estoque === 0;
+
+              return (
+                <div
+                  key={`mais-pedido-${produto.nome}`}
+                  onClick={(e) => handleAdicionarDestaque(e, produto)}
+                  className="w-36 sm:w-44 flex-shrink-0 rounded-2xl overflow-hidden bg-white border border-[#F3E8E2] shadow-sm relative group cursor-pointer active:scale-[0.98] transition-all duration-200"
+                >
+                  <div className="relative h-44 sm:h-48 w-full bg-cream">
+                    <Image
+                      src={imagemSrc}
+                      alt={produto.nome}
+                      fill
+                      unoptimized={imagemSrc.startsWith("/api/")}
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      sizes="(max-width: 640px) 144px, 176px"
+                    />
+
+                    {/* Badge sobreposto */}
+                    <div className="absolute top-2 left-2 z-10">
+                      <span className="inline-flex items-center gap-0.5 rounded-md bg-white/90 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-[#C88A8A] shadow-xs">
+                        ★ Top
+                      </span>
+                    </div>
+
+                    {/* Barra inferior / Sobreposição escura transparente */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent flex flex-col justify-end p-2.5 sm:p-3 z-10">
+                      <h3 className="text-white font-bold text-xs sm:text-sm line-clamp-1 drop-shadow-sm mb-1">
+                        {produto.nome}
+                      </h3>
+                      <div className="flex items-center justify-between">
+                        <span className="text-white font-extrabold text-sm sm:text-base drop-shadow-sm">
+                          {formatarPreco(produto.preco)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleAdicionarDestaque(e, produto)}
+                          disabled={esgotado}
+                          className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-[#C88A8A] hover:bg-[#B77979] text-white flex items-center justify-center shadow-md active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+                          aria-label={`Adicionar ${produto.nome}`}
+                        >
+                          <Plus className="h-4 w-4 stroke-[2.5]" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
       )}
-    </>
+
+      {/* 4. Listagem de Categorias e Itens em Lista Vertical */}
+      <div className="space-y-8">
+        {filtroSanitizado === "Todos" ? (
+          // Exibe cada categoria com seu título, emoji temático e divisor
+          categorias.map((cat) => {
+            const itensDaCategoria = produtosPorCategoria.get(cat) ?? [];
+            if (itensDaCategoria.length === 0) return null;
+
+            return (
+              <section key={cat} className="space-y-3.5">
+                <div className="flex items-center gap-3 pt-2">
+                  <h2 className="text-base sm:text-lg font-bold text-[#4A2B20] flex items-center gap-2 whitespace-nowrap capitalize">
+                    <span>{iconePorCategoria(cat)}</span>
+                    <span>{cat}</span>
+                  </h2>
+                  <div className="h-px flex-1 bg-[#EAD8D0]" />
+                </div>
+
+                <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+                  {itensDaCategoria.map((produto) => (
+                    <ProductCard key={produto.nome} produto={produto} />
+                  ))}
+                </div>
+              </section>
+            );
+          })
+        ) : (
+          // Exibe apenas a categoria selecionada com cabeçalho
+          <section className="space-y-3.5">
+            <div className="flex items-center gap-3 pt-2">
+              <h2 className="text-base sm:text-lg font-bold text-[#4A2B20] flex items-center gap-2 whitespace-nowrap capitalize">
+                <span>{iconePorCategoria(filtroSanitizado)}</span>
+                <span>{filtroSanitizado}</span>
+              </h2>
+              <div className="h-px flex-1 bg-[#EAD8D0]" />
+            </div>
+
+            <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+              {(produtosPorCategoria.get(filtroSanitizado) ?? []).map(
+                (produto) => (
+                  <ProductCard key={produto.nome} produto={produto} />
+                )
+              )}
+            </div>
+          </section>
+        )}
+      </div>
+
+      {/* Caso vazio na categoria filtrada */}
+      {filtroSanitizado !== "Todos" &&
+        (produtosPorCategoria.get(filtroSanitizado) ?? []).length === 0 && (
+          <div className="text-center text-chocolate-muted py-12 space-y-2">
+            <p className="font-semibold text-chocolate">
+              Nenhum produto encontrado em &ldquo;{filtroSanitizado}&rdquo; no
+              momento.
+            </p>
+            <button
+              onClick={() => setFiltro("Todos")}
+              className="text-xs text-[#C88A8A] font-bold hover:underline"
+            >
+              Ver todos os produtos do cardápio
+            </button>
+          </div>
+        )}
+    </div>
   );
 }

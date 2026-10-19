@@ -8,6 +8,7 @@ export interface ProdutoAPI {
 
 export interface Produto {
   nome: string;
+  descricao?: string | null;
   preco: number;
   estoque: number;
   categoria: string;
@@ -24,6 +25,18 @@ const imagensPorCategoria: Record<string, string> = {
   sobremesas: "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&h=300&fit=crop",
   encomendas: "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=400&h=300&fit=crop",
 };
+
+export function iconePorCategoria(categoria: string): string {
+  const cat = categoria.toLowerCase().trim();
+  if (cat.includes("bolo")) return "🧁";
+  if (cat.includes("doce") || cat.includes("brigadeiro") || cat.includes("trufa")) return "🍫";
+  if (cat.includes("salgado") || cat.includes("coxinha") || cat.includes("torta")) return "🥟";
+  if (cat.includes("sobremesa") || cat.includes("pudim") || cat.includes("mousse")) return "🍨";
+  if (cat.includes("bebida") || cat.includes("cafe") || cat.includes("café") || cat.includes("suco")) return "☕";
+  if (cat.includes("encomenda") || cat.includes("festa") || cat.includes("kit")) return "🎁";
+  if (cat.includes("pao") || cat.includes("pão")) return "🥖";
+  return "✨";
+}
 
 export function imagemPorCategoria(categoria: string): string {
   return (

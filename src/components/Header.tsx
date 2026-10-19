@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, AtSign, Phone, ShoppingBag } from "lucide-react";
+import { Menu, X, AtSign, Phone, ShoppingBag, Mail } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 
 const navLinks = [
@@ -19,18 +19,18 @@ export default function Header() {
   const { totalItens, toggleSacola } = useCart();
 
   return (
-    <header className="sticky top-0 z-50 bg-warm-white/90 backdrop-blur-md border-b border-rose-light">
+    <header className="sticky top-0 z-50 bg-warm-white/95 backdrop-blur-md border-b border-rose-light/70 shadow-xs">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-14 sm:h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
             <Image
               src="/logo.png"
               alt="Ana Cake"
-              width={44}
-              height={44}
+              width={38}
+              height={38}
               className="rounded-full transition-transform group-hover:scale-105"
             />
-            <span className="text-lg font-bold tracking-tight text-chocolate">
+            <span className="text-base sm:text-lg font-bold tracking-tight text-chocolate">
               Ana Cake
             </span>
           </Link>
@@ -47,10 +47,22 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            {/* Ícone sutil de mensagens/contato */}
+            <a
+              href="https://wa.me/5519978293375"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 text-chocolate-muted hover:text-rose-pastel transition-colors rounded-full hover:bg-rose-light/30"
+              aria-label="Fale conosco no WhatsApp"
+              title="Fale Conosco"
+            >
+              <Mail className="h-5 w-5" />
+            </a>
+
             <button
               onClick={toggleSacola}
-              className="relative p-2 text-chocolate-light hover:text-rose-pastel transition-colors"
+              className="relative p-2 text-chocolate-light hover:text-rose-pastel transition-colors rounded-full hover:bg-rose-light/30"
               aria-label="Abrir sacola"
             >
               <ShoppingBag className="h-5 w-5" />
@@ -58,7 +70,7 @@ export default function Header() {
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-pastel px-1 text-[10px] font-bold text-white"
+                  className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-pastel px-1 text-[10px] font-bold text-white shadow-xs"
                 >
                   {totalItens}
                 </motion.span>

@@ -35,18 +35,20 @@ export async function listarCardapioPublico(): Promise<Produto[]> {
   try {
     const { rows } = await getPool().query<{
       nome: string;
+      descricao: string | null;
       preco: number;
       estoque_atual: number;
       categoria: string | null;
       url_imagem: string | null;
     }>(
-      `SELECT nome, preco::float8 AS preco, estoque_atual, categoria, url_imagem
+      `SELECT nome, descricao, preco::float8 AS preco, estoque_atual, categoria, url_imagem
        FROM produtos
        WHERE ativo = true
        ORDER BY categoria, nome ASC`
     );
     return rows.map((r) => ({
       nome: r.nome,
+      descricao: r.descricao,
       preco: r.preco,
       estoque: r.estoque_atual,
       categoria: r.categoria ?? "doces",

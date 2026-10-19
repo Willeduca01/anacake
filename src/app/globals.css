@@ -33,9 +33,11 @@ body {
 }
 
 /* Ocultar barra de rolagem em áreas com h-scroll preservando a rolagem por toque */
+.no-scrollbar::-webkit-scrollbar,
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+.no-scrollbar,
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;

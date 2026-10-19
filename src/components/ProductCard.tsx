@@ -9,20 +9,20 @@ import { useCart } from "@/contexts/CartContext";
 function StockBadge({ estoque }: { estoque: number }) {
   if (estoque === 0) {
     return (
-      <span className="inline-flex items-center rounded-full bg-badge-red px-2.5 py-0.5 text-xs font-medium text-badge-red-text">
+      <span className="inline-flex items-center rounded-md bg-rose-100/95 px-2 py-0.5 text-[10px] font-semibold text-rose-800 shadow-xs">
         Esgotado
       </span>
     );
   }
   if (estoque <= 5) {
     return (
-      <span className="inline-flex items-center rounded-full bg-badge-yellow px-2.5 py-0.5 text-xs font-medium text-badge-yellow-text">
-        Apenas {estoque} restantes
+      <span className="inline-flex items-center rounded-md bg-amber-100/95 px-2 py-0.5 text-[10px] font-semibold text-amber-800 shadow-xs">
+        Restam {estoque}
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center rounded-full bg-badge-green px-2.5 py-0.5 text-xs font-medium text-badge-green-text">
+    <span className="inline-flex items-center rounded-md bg-emerald-100/90 backdrop-blur-xs px-2 py-0.5 text-[10px] font-semibold text-emerald-800 shadow-xs">
       Em estoque
     </span>
   );
@@ -33,7 +33,9 @@ export default function ProductCard({ produto }: { produto: Produto }) {
   const itemNaSacola = itens.find((i) => i.produto.nome === produto.nome);
   const esgotado = produto.estoque === 0;
 
-  const handleAdicionar = () => {
+  const handleAdicionar = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (esgotado) return;
     adicionar(produto);
     abrirSacola();
   };
@@ -43,48 +45,62 @@ export default function ProductCard({ produto }: { produto: Produto }) {
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      transition={{ duration: 0.4 }}
-      className="group rounded-2xl border border-rose-light bg-white overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300"
+      exit={{ opacity: 0, y: 14 }}
+      transition={{ duration: 0.3 }}
+      onClick={handleAdicionar}
+      className="group relative flex items-center gap-3.5 rounded-2xl bg-white border border-[#F3E8E2] p-3 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-cream">
+      {/* Coluna da esquerda (Imagem com tamanho fixo e badge) */}
+      <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 rounded-xl overflow-hidden bg-cream">
         <Image
           src={imagemSrc}
           alt={produto.nome}
           fill
           unoptimized={imagemSrc.startsWith("/api/")}
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          sizes="(max-width: 640px) 96px, 112px"
         />
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-1.5 left-1.5 z-10">
           <StockBadge estoque={produto.estoque} />
         </div>
         {itemNaSacola && (
-          <div className="absolute top-3 right-3 h-7 min-w-7 rounded-full bg-rose-pastel flex items-center justify-center px-2 gap-1">
-            <Check className="h-3.5 w-3.5 text-white" />
-            <span className="text-xs font-bold text-white">{itemNaSacola.quantidade}</span>
+          <div className="absolute bottom-1.5 right-1.5 h-5 min-w-5 rounded-full bg-[#C88A8A] flex items-center justify-center px-1.5 gap-0.5 shadow-sm">
+            <Check className="h-3 w-3 text-white" />
+            <span className="text-[10px] font-bold text-white">
+              {itemNaSacola.quantidade}
+            </span>
           </div>
         )}
       </div>
 
-      <div className="p-5">
-        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-rose-pastel">
-          {produto.categoria}
-        </span>
-        <h3 className="text-base font-semibold text-chocolate mb-3">{produto.nome}</h3>
-        <div className="flex items-center justify-between">
-          <span className="text-lg font-bold text-chocolate">
+      {/* Coluna da direita (Informações e Ação) */}
+      <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch py-0.5">
+        <div>
+          <h3 className="font-bold text-sm text-[#4A2B20] line-clamp-1 group-hover:text-[#C88A8A] transition-colors">
+            {produto.nome}
+          </h3>
+          <p className="text-xs text-[#8B6E60] line-clamp-2 mt-0.5 leading-relaxed">
+            {produto.descricao ||
+              `Delicioso doce artesanal de ${produto.categoria}. Feito com ingredientes de alta confeitaria.`}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 mt-2 pt-1 border-t border-[#F8EFEA]/80">
+          <span className="font-bold text-base text-[#4A2B20] whitespace-nowrap">
             {formatarPreco(produto.preco)}
           </span>
+
           <button
+            type="button"
             onClick={handleAdicionar}
             disabled={esgotado}
-            className="inline-flex items-center gap-1.5 rounded-full bg-rose-pastel px-4 py-1.5 text-xs font-semibold text-white hover:bg-chocolate-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-xl px-3 py-1.5 bg-[#C88A8A] hover:bg-[#B77979] text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label={`Adicionar ${produto.nome}`}
           >
             <ShoppingBag className="h-3.5 w-3.5" />
-            {esgotado ? "Esgotado" : "Adicionar"}
+            <span>{esgotado ? "Esgotado" : "Adicionar"}</span>
           </button>
         </div>
       </div>

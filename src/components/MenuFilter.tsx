@@ -1,40 +1,34 @@
 "use client";
 
-import { motion } from "framer-motion";
-
 interface MenuFilterProps {
   categorias: string[];
   filtroAtivo: string;
   onFiltrar: (filtro: string) => void;
 }
 
-export default function MenuFilter({ categorias, filtroAtivo, onFiltrar }: MenuFilterProps) {
+export default function MenuFilter({
+  categorias,
+  filtroAtivo,
+  onFiltrar,
+}: MenuFilterProps) {
   const opcoes = ["Todos", ...categorias];
 
   return (
-    <div className="flex flex-wrap justify-center gap-3">
+    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scrollbar-none py-1.5 px-1 sm:justify-center">
       {opcoes.map((opcao) => {
         const ativo = filtroAtivo === opcao;
         return (
           <button
             key={opcao}
+            type="button"
             onClick={() => onFiltrar(opcao)}
-            className="relative rounded-full px-5 py-2 text-sm font-medium transition-colors"
+            className={`whitespace-nowrap rounded-full px-5 py-1.5 text-sm font-medium transition-all flex-shrink-0 cursor-pointer ${
+              ativo
+                ? "bg-[#C88A8A] text-white shadow-xs"
+                : "bg-white border border-[#EAD8D0] text-[#5C3D2E] hover:border-[#C88A8A]/60 hover:text-[#4A2B20]"
+            }`}
           >
-            {ativo && (
-              <motion.span
-                layoutId="filtro-ativo"
-                className="absolute inset-0 rounded-full bg-rose-pastel shadow-md"
-                transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-              />
-            )}
-            <span
-              className={`relative z-10 ${
-                ativo ? "text-white" : "text-chocolate-muted hover:text-chocolate"
-              }`}
-            >
-              {opcao}
-            </span>
+            {opcao}
           </button>
         );
       })}
