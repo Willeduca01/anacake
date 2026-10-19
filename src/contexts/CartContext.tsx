@@ -20,7 +20,7 @@ interface CartContextType {
   abrirSacola: () => void;
   fecharSacola: () => void;
   toggleSacola: () => void;
-  adicionar: (produto: Produto) => void;
+  adicionar: (produto: Produto, quantidade?: number) => void;
   remover: (nome: string) => void;
   incrementar: (nome: string) => void;
   decrementar: (nome: string) => void;
@@ -40,17 +40,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const fecharSacola = useCallback(() => setAberta(false), []);
   const toggleSacola = useCallback(() => setAberta((v) => !v), []);
 
-  const adicionar = useCallback((produto: Produto) => {
+  const adicionar = useCallback((produto: Produto, quantidade = 1) => {
+    const qtd = Math.max(1, quantidade);
     setItens((prev) => {
       const existente = prev.find((i) => i.produto.nome === produto.nome);
       if (existente) {
         return prev.map((i) =>
           i.produto.nome === produto.nome
-            ? { ...i, quantidade: i.quantidade + 1 }
+            ? { ...i, quantidade: i.quantidade + qtd }
             : i
         );
       }
-      return [...prev, { produto, quantidade: 1 }];
+      return [...prev, { produto, quantidade: qtd }];
     });
   }, []);
 

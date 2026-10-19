@@ -28,10 +28,22 @@ function StockBadge({ estoque }: { estoque: number }) {
   );
 }
 
-export default function ProductCard({ produto }: { produto: Produto }) {
+interface ProductCardProps {
+  produto: Produto;
+  onAbrirDetalhes?: (produto: Produto) => void;
+}
+
+export default function ProductCard({
+  produto,
+  onAbrirDetalhes,
+}: ProductCardProps) {
   const { itens, adicionar } = useCart();
   const itemNaSacola = itens.find((i) => i.produto.nome === produto.nome);
   const esgotado = produto.estoque === 0;
+
+  const handleCardClick = () => {
+    onAbrirDetalhes?.(produto);
+  };
 
   const handleAdicionar = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -48,8 +60,8 @@ export default function ProductCard({ produto }: { produto: Produto }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 14 }}
       transition={{ duration: 0.3 }}
-      onClick={handleAdicionar}
-      className="group relative flex items-center gap-3.5 rounded-2xl bg-white border border-[#F3E8E2] p-3 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+      onClick={handleCardClick}
+      className="group relative flex items-center gap-3.5 rounded-2xl bg-white border border-[#F3E8E2] hover:border-[#E8D8CF] p-3 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
     >
       {/* Coluna da esquerda (Imagem com tamanho fixo e badge) */}
       <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 rounded-xl overflow-hidden bg-cream">

@@ -11,6 +11,7 @@ import {
 } from "@/constants/products";
 import MenuFilter from "@/components/MenuFilter";
 import ProductCard from "@/components/ProductCard";
+import ProductDetailModal from "@/components/ProductDetailModal";
 import { useCart } from "@/contexts/CartContext";
 import { sanitizarTexto } from "@/lib/sanitize";
 
@@ -60,6 +61,7 @@ export default function CardapioClient({
   }
 
   const filtroSanitizado = sanitizarTexto(filtro) || "Todos";
+  const [produtoDetalhe, setProdutoDetalhe] = useState<Produto | null>(null);
 
   // Produtos mais pedidos (destaques do topo)
   const maisPedidos = useMemo(() => {
@@ -117,7 +119,7 @@ export default function CardapioClient({
               return (
                 <div
                   key={`mais-pedido-${produto.nome}`}
-                  onClick={(e) => handleAdicionarDestaque(e, produto)}
+                  onClick={() => setProdutoDetalhe(produto)}
                   className="w-36 sm:w-44 flex-shrink-0 rounded-2xl overflow-hidden bg-white border border-[#F3E8E2] shadow-sm relative group cursor-pointer active:scale-[0.98] transition-all duration-200"
                 >
                   <div className="relative h-44 sm:h-48 w-full bg-cream">
@@ -202,7 +204,11 @@ export default function CardapioClient({
 
                 <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
                   {itensDaCategoria.map((produto) => (
-                    <ProductCard key={produto.nome} produto={produto} />
+                    <ProductCard
+                      key={produto.nome}
+                      produto={produto}
+                      onAbrirDetalhes={setProdutoDetalhe}
+                    />
                   ))}
                 </div>
               </section>
@@ -222,7 +228,11 @@ export default function CardapioClient({
             <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
               {(produtosPorCategoria.get(filtroSanitizado) ?? []).map(
                 (produto) => (
-                  <ProductCard key={produto.nome} produto={produto} />
+                  <ProductCard
+                    key={produto.nome}
+                    produto={produto}
+                    onAbrirDetalhes={setProdutoDetalhe}
+                  />
                 )
               )}
             </div>
@@ -267,6 +277,11 @@ export default function CardapioClient({
           </button>
         </aside>
       )}
+      {/* Modal de Detalhes do Produto ao clicar no card */}
+      <ProductDetailModal
+        produto={produtoDetalhe}
+        onClose={() => setProdutoDetalhe(null)}
+      />
     </div>
   );
 }
