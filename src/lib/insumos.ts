@@ -167,7 +167,21 @@ export async function atualizarInsumoBase(
 }
 
 export async function excluirInsumoBase(id: string): Promise<void> {
-  await getPool().query("DELETE FROM insumos_base WHERE id = $1", [id]);
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      "UPDATE insumos SET insumo_base_id = NULL WHERE insumo_base_id = $1",
+      [id]
+    );
+    await client.query("DELETE FROM insumos_base WHERE id = $1", [id]);
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 /* ==========================================================
@@ -351,7 +365,22 @@ export async function atualizarInsumo(
 }
 
 export async function excluirInsumo(id: string): Promise<void> {
-  await getPool().query("DELETE FROM insumos WHERE id = $1", [id]);
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    // Remove vínculos em receitas (caso exista)
+    await client.query("DELETE FROM receita_insumos WHERE insumo_id = $1", [id]);
+    // Remove histórico de compras registrado para este insumo
+    await client.query("DELETE FROM insumo_compras WHERE insumo_id = $1", [id]);
+    // Remove o insumo do estoque
+    await client.query("DELETE FROM insumos WHERE id = $1", [id]);
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 /* ==========================================================

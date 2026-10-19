@@ -160,6 +160,7 @@ export async function excluirInsumoAction(formData: FormData) {
   await excluirInsumo(id);
   revalidatePath("/admin");
   revalidatePath("/admin/insumos");
+  revalidatePath("/admin/receitas");
 }
 
 /* ==========================================================

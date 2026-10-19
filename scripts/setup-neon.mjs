@@ -64,7 +64,7 @@ async function main() {
     CREATE TABLE IF NOT EXISTS receita_insumos (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       receita_id UUID NOT NULL REFERENCES receitas(id) ON DELETE CASCADE,
-      insumo_id UUID NOT NULL REFERENCES insumos(id) ON DELETE RESTRICT,
+      insumo_id UUID NOT NULL REFERENCES insumos(id) ON DELETE CASCADE,
       quantidade_utilizada NUMERIC(10, 2) NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );

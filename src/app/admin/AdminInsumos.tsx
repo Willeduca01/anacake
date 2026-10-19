@@ -1595,6 +1595,7 @@ function InsumoRow({
   onCancelar: () => void;
   onComprar?: () => void;
 }) {
+  const [excluindo, setExcluindo] = useState(false);
   const sufixoBase =
     insumo.tipo_medida === "UNIDADE"
       ? "un"
@@ -1702,19 +1703,28 @@ function InsumoRow({
               {editando ? "Fechar" : "Editar"}
             </button>
             <form
-              action={excluirInsumoAction}
-              onSubmit={(e) => {
+              action={async (formData) => {
                 if (!confirm(`Excluir o insumo "${insumo.nome}"?`)) {
-                  e.preventDefault();
+                  return;
+                }
+                setExcluindo(true);
+                try {
+                  await excluirInsumoAction(formData);
+                } catch (err: unknown) {
+                  const msg = err instanceof Error ? err.message : "Tente novamente.";
+                  alert(`Não foi possível excluir o insumo: ${msg}`);
+                } finally {
+                  setExcluindo(false);
                 }
               }}
             >
               <input type="hidden" name="id" value={insumo.id} />
               <button
                 type="submit"
-                className="rounded-lg border border-badge-red px-2.5 py-1.5 text-xs font-medium text-badge-red-text hover:bg-badge-red transition-colors"
+                disabled={excluindo}
+                className="rounded-lg border border-badge-red px-2.5 py-1.5 text-xs font-medium text-badge-red-text hover:bg-badge-red transition-colors disabled:opacity-50"
               >
-                Excluir
+                {excluindo ? "Excluindo..." : "Excluir"}
               </button>
             </form>
           </div>
@@ -1758,6 +1768,7 @@ function InsumoBaseRow({
   onEditar: () => void;
   onCancelar: () => void;
 }) {
+  const [excluindo, setExcluindo] = useState(false);
   const Icone =
     item.tipo_medida === "UNIDADE"
       ? Package
@@ -1797,19 +1808,28 @@ function InsumoBaseRow({
               {editando ? "Fechar" : "Editar"}
             </button>
             <form
-              action={excluirInsumoBaseAction}
-              onSubmit={(e) => {
+              action={async (formData) => {
                 if (!confirm(`Excluir o item base "${item.nome}"?`)) {
-                  e.preventDefault();
+                  return;
+                }
+                setExcluindo(true);
+                try {
+                  await excluirInsumoBaseAction(formData);
+                } catch (err: unknown) {
+                  const msg = err instanceof Error ? err.message : "Tente novamente.";
+                  alert(`Não foi possível excluir o item base: ${msg}`);
+                } finally {
+                  setExcluindo(false);
                 }
               }}
             >
               <input type="hidden" name="id" value={item.id} />
               <button
                 type="submit"
-                className="rounded-lg border border-badge-red px-3 py-1.5 text-xs font-medium text-badge-red-text hover:bg-badge-red transition-colors"
+                disabled={excluindo}
+                className="rounded-lg border border-badge-red px-3 py-1.5 text-xs font-medium text-badge-red-text hover:bg-badge-red transition-colors disabled:opacity-50"
               >
-                Excluir
+                {excluindo ? "Excluindo..." : "Excluir"}
               </button>
             </form>
           </div>
