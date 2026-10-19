@@ -1,4 +1,4 @@
-import { AtSign, Phone, Mail } from "lucide-react";
+import { AtSign, Phone } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -67,10 +67,6 @@ export default function Footer() {
                 >
                   (19) 97829-3375
                 </a>
-              </li>
-              <li className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-rose-soft" />
-                <span>contato@anacake.com.br</span>
               </li>
               <li className="flex items-center gap-2">
                 <AtSign className="h-4 w-4 text-rose-soft" />
