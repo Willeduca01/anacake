@@ -171,7 +171,7 @@ export async function listarPedidosPendentes(): Promise<Pedido[]> {
     itens: PedidoItem[] | null;
   }>(
     `SELECT p.id, p.status, p.cliente_nome, p.metodo_pagamento, p.total::float8 AS total,
-            to_char(p.created_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS created_at,
+            to_char(p.created_at, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS created_at,
             COALESCE(
               json_agg(
                 json_build_object(

@@ -10,11 +10,21 @@ if (!connectionString) {
 }
 
 async function main() {
-  const pool = new Pool({ connectionString });
+  const pool = new Pool({ 
+    connectionString,
+    options: "-c timezone=America/Sao_Paulo"
+  });
   console.log('Connecting to Neon PostgreSQL...');
   
   const client = await pool.connect();
-  console.log('Connected! Creating tables and indexes...');
+  console.log('Connected! Setting timezone and creating tables and indexes...');
+
+  try {
+    await client.query("ALTER ROLE CURRENT_USER SET timezone TO 'America/Sao_Paulo'");
+  } catch (e) {
+    console.warn('Notice: Unable to ALTER ROLE timezone, setting for session:', e.message);
+  }
+  await client.query("SET timezone = 'America/Sao_Paulo'");
   
   await client.query(`
     CREATE TABLE IF NOT EXISTS insumos_base (

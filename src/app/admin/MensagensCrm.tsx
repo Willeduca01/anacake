@@ -40,6 +40,7 @@ function formatarData(iso: string): string {
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
   });
 }
 
@@ -93,6 +94,7 @@ export default function MensagensCrm({
     const horario = new Date().toLocaleTimeString("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "America/Sao_Paulo",
     });
 
     setConversas((prev) =>

@@ -193,7 +193,7 @@ export async function listarVendas(limit = 100): Promise<VendaRegistro[]> {
             COALESCE(v.conciliado_por_admin, false) AS conciliado_por_admin,
             v.quantidade,
             v.valor_total::float8 AS valor_total,
-            to_char(v.data_venda, 'YYYY-MM-DD"T"HH24:MI:SS') AS data_venda,
+            to_char(v.data_venda, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS data_venda,
             v.metodo_pagamento
      FROM vendas v
      LEFT JOIN produtos p ON p.id = v.produto_id

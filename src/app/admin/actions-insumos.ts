@@ -189,7 +189,7 @@ export async function registrarCompraInsumoAction(formData: FormData) {
     quantidade,
     preco_total: precoTotal,
     estabelecimento: estabelecimento || null,
-    data_compra: dataCompra ? new Date(dataCompra).toISOString() : null,
+    data_compra: dataCompra || null,
     observacoes: observacoes || null,
   };
 

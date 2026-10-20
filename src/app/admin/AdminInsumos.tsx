@@ -799,8 +799,7 @@ function ModalRegistrarCompra({
   const [precoTotal, setPrecoTotal] = useState<number | "">("");
   const [estabelecimento, setEstabelecimento] = useState("");
   const [dataCompra, setDataCompra] = useState(() => {
-    const d = new Date();
-    return d.toISOString().slice(0, 10);
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
   });
   const [observacoes, setObservacoes] = useState("");
   const [enviando, setEnviando] = useState(false);

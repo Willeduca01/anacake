@@ -152,8 +152,8 @@ export async function listarReceitas(): Promise<Receita[]> {
          COALESCE(r.publicado, false) AS publicado,
          r.url_imagem,
          (r.imagem_dados IS NOT NULL) AS tem_imagem,
-         to_char(r.created_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS created_at,
-         to_char(r.updated_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS updated_at,
+         to_char(r.created_at, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS created_at,
+         to_char(r.updated_at, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS updated_at,
          p.estoque_atual AS produto_estoque,
          p.preco::float8 AS produto_preco,
          p.ativo AS produto_ativo
@@ -252,8 +252,8 @@ export async function obterReceita(id: string): Promise<Receita | null> {
          COALESCE(r.publicado, false) AS publicado,
          r.url_imagem,
          (r.imagem_dados IS NOT NULL) AS tem_imagem,
-         to_char(r.created_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS created_at,
-         to_char(r.updated_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS updated_at,
+         to_char(r.created_at, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS created_at,
+         to_char(r.updated_at, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS updated_at,
          p.estoque_atual AS produto_estoque,
          p.preco::float8 AS produto_preco,
          p.ativo AS produto_ativo

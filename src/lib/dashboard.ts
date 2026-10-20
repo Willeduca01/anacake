@@ -135,7 +135,7 @@ export async function getDashboardFinanceiro(
              ELSE 'Venda Cardápio' 
            END AS detalhe,
            v.valor_total::float8 AS valor,
-           to_char(v.data_venda, 'YYYY-MM-DD"T"HH24:MI:SS') AS data,
+           to_char(v.data_venda, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS data,
            v.metodo_pagamento AS metodo_ou_local,
            v.data_venda AS raw_date
          FROM vendas v
@@ -151,7 +151,7 @@ export async function getDashboardFinanceiro(
            'Insumo: ' || i.nome AS titulo,
            COALESCE(c.estabelecimento, 'Compra de Insumo') AS detalhe,
            c.preco_total::float8 AS valor,
-           to_char(c.data_compra, 'YYYY-MM-DD"T"HH24:MI:SS') AS data,
+           to_char(c.data_compra, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS data,
            c.estabelecimento AS metodo_ou_local,
            c.data_compra AS raw_date
          FROM insumo_compras c

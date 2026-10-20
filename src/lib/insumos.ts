@@ -105,8 +105,8 @@ export async function listarInsumosBase(): Promise<InsumoBase[]> {
        unidade_padrao,
        quantidade_padrao::float8 AS quantidade_padrao, 
        quantidade_base::float8 AS quantidade_base, 
-       to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS created_at,
-       to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS updated_at
+       to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS created_at,
+       to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS updated_at
      FROM insumos_base
      ORDER BY nome ASC`
   );
@@ -203,8 +203,8 @@ export async function listarInsumos(): Promise<Insumo[]> {
        custo_por_unidade_base::float8 AS custo_por_unidade_base, 
        COALESCE(estoque_atual, 0)::float8 AS estoque_atual,
        COALESCE(estoque_minimo, 5)::float8 AS estoque_minimo,
-       to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS created_at,
-       to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS updated_at
+       to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS created_at,
+       to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS updated_at
      FROM insumos
      ORDER BY created_at DESC, nome ASC`
   );
@@ -434,7 +434,7 @@ export async function registrarCompraInsumo(
          preco_total::float8 AS preco_total, 
          preco_unitario::float8 AS preco_unitario, 
          estabelecimento, 
-         to_char(data_compra, 'YYYY-MM-DD"T"HH24:MI:SS') AS data_compra, 
+         to_char(data_compra, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS data_compra, 
          observacoes`,
       [
         input.insumo_id,
@@ -508,7 +508,7 @@ export async function listarComprasInsumos(
          c.preco_total::float8 AS preco_total, 
          c.preco_unitario::float8 AS preco_unitario, 
          c.estabelecimento, 
-         to_char(c.data_compra, 'YYYY-MM-DD"T"HH24:MI:SS') AS data_compra, 
+         to_char(c.data_compra, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS data_compra, 
          c.observacoes
        FROM insumo_compras c
        JOIN insumos i ON i.id = c.insumo_id
@@ -524,7 +524,7 @@ export async function listarComprasInsumos(
          c.preco_total::float8 AS preco_total, 
          c.preco_unitario::float8 AS preco_unitario, 
          c.estabelecimento, 
-         to_char(c.data_compra, 'YYYY-MM-DD"T"HH24:MI:SS') AS data_compra, 
+         to_char(c.data_compra, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS data_compra, 
          c.observacoes
        FROM insumo_compras c
        JOIN insumos i ON i.id = c.insumo_id
@@ -578,8 +578,8 @@ export async function getInsumosEstoqueBaixo(): Promise<Insumo[]> {
        custo_por_unidade_base::float8 AS custo_por_unidade_base, 
        COALESCE(estoque_atual, 0)::float8 AS estoque_atual,
        COALESCE(estoque_minimo, 5)::float8 AS estoque_minimo,
-       to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS created_at,
-       to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS') AS updated_at
+       to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS created_at,
+       to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS updated_at
      FROM insumos
      WHERE COALESCE(estoque_atual, 0) <= COALESCE(estoque_minimo, 5)
      ORDER BY estoque_atual ASC, nome ASC`

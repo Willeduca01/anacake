@@ -110,3 +110,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 **Impacto:** Redução imediata do custo de execução das queries nos planos do PostgreSQL (`Seq Scan` substituído por `Index Scan` / `Index Only Scan`), alívio de memória evitando operações de Sort, e script idempotente versionado em `scripts/migrate-performance-indexes.mjs` e integrado em `scripts/setup-neon.mjs`.
 
+### 2026-10-20 - Padronização do fuso horário para América/São Paulo (UTC-3)
+
+**Decisão:** Padronizar todas as camadas da aplicação (PostgreSQL, Node.js e componentes React) para o fuso horário de Brasília/São Paulo (`America/Sao_Paulo`):
+1. **PostgreSQL Session:** Configurado `options: "-c timezone=America/Sao_Paulo"` na inicialização do pool (`src/lib/db.ts`) e executado `ALTER DATABASE neondb SET timezone TO 'America/Sao_Paulo'` e `ALTER ROLE neondb_owner SET timezone TO 'America/Sao_Paulo'`.
+2. **Formatação SQL (ISO com Offset):** As consultas que usavam `to_char(campo, 'YYYY-MM-DD"T"HH24:MI:SS')` foram atualizadas para `to_char(campo, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM')`, retornando a string ISO completa com o offset `-03:00` (ex: `2026-10-19T18:58:19-03:00`).
+3. **Formatadores Frontend:** As funções `formatarDataHora` e `formatarData` foram fixadas com `timeZone: "America/Sao_Paulo"` em `toLocaleString()`.
+4. **Container e Ambiente:** Adicionada variável de ambiente `TZ=America/Sao_Paulo` no `docker-compose.yml` e `tzdata` com `ENV TZ=America/Sao_Paulo` no `Dockerfile`.
+5. **Datas manuais:** Ajustado formulário de compra de insumos para não realizar conversão com drift UTC (`new Date().toISOString().slice(0, 10)` alterado para `Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(...)`).
+
+**Contexto:** O PostgreSQL do Neon rodava por padrão em `GMT/UTC`. Quando as vendas eram salvas com `DEFAULT CURRENT_TIMESTAMP`, o timestamp UTC gravado era correto, mas o `to_char` formatava na timezone da sessão (GMT, +3 horas à frente do horário de SP) gerando strings sem offset (ex: `21:58` em vez de `18:58`), fazendo o painel admin exibir as movimentações adiantadas em 3 horas.
+
+**Impacto:** Horários no painel admin, tabelas de vendas, movimentações recentes e relatórios agora batem 100% com o horário local de São Paulo.
+
