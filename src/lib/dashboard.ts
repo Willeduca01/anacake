@@ -31,6 +31,9 @@ export interface DashboardFinanceiro {
   periodo: PeriodoFiltro;
   receita_total: number;
   gastos_insumos: number;
+  gastos_estoque: number;
+  gastos_avulsos: number;
+  gastos_investimento: number;
   resultado_operacional: number;
   margem_bruta_pct: number;
   ticket_medio: number;
@@ -68,18 +71,27 @@ export async function getDashboardFinanceiro(
   const receitaTotal = vendasRows[0]?.receita_total ?? 0;
   const totalVendas = vendasRows[0]?.total_vendas ?? 0;
 
-  // 2. Gastos com insumos do período
+  // 2. Gastos com insumos e saídas do período
   const { rows: comprasRows } = await pool.query<{
     gastos_insumos: number;
+    gastos_estoque: number;
+    gastos_avulsos: number;
+    gastos_investimento: number;
     total_compras: number;
   }>(
     `SELECT 
        COALESCE(SUM(preco_total), 0)::float8 AS gastos_insumos,
+       COALESCE(SUM(CASE WHEN tipo_compra = 'PADRAO' OR tipo_compra IS NULL THEN preco_total ELSE 0 END), 0)::float8 AS gastos_estoque,
+       COALESCE(SUM(CASE WHEN tipo_compra = 'AVULSO' AND (categoria_gasto != 'INVESTIMENTO' OR categoria_gasto IS NULL) THEN preco_total ELSE 0 END), 0)::float8 AS gastos_avulsos,
+       COALESCE(SUM(CASE WHEN tipo_compra = 'AVULSO' AND categoria_gasto = 'INVESTIMENTO' THEN preco_total ELSE 0 END), 0)::float8 AS gastos_investimento,
        COUNT(*)::int AS total_compras
      FROM insumo_compras
      WHERE data_compra >= ${queryDataInicio} AND data_compra <= CURRENT_TIMESTAMP`
   );
   const gastosInsumos = comprasRows[0]?.gastos_insumos ?? 0;
+  const gastosEstoque = comprasRows[0]?.gastos_estoque ?? 0;
+  const gastosAvulsos = comprasRows[0]?.gastos_avulsos ?? 0;
+  const gastosInvestimento = comprasRows[0]?.gastos_investimento ?? 0;
   const totalCompras = comprasRows[0]?.total_compras ?? 0;
 
   // 3. Resultado Operacional e Margem Bruta
@@ -148,14 +160,18 @@ export async function getDashboardFinanceiro(
          SELECT 
            'compra-' || c.id::text AS id,
            'SAIDA' AS tipo,
-           'Insumo: ' || i.nome AS titulo,
-           COALESCE(c.estabelecimento, 'Compra de Insumo') AS detalhe,
+           COALESCE(c.descricao_avulsa, i.nome, 'Insumo Avulso') AS titulo,
+           CASE 
+             WHEN c.tipo_compra = 'AVULSO' AND c.categoria_gasto = 'INVESTIMENTO' THEN 'Investimento'
+             WHEN c.tipo_compra = 'AVULSO' THEN 'Insumo Avulso (Gasto)'
+             ELSE COALESCE(c.estabelecimento, 'Compra de Insumo')
+           END AS detalhe,
            c.preco_total::float8 AS valor,
            to_char(c.data_compra, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS data,
            c.estabelecimento AS metodo_ou_local,
            c.data_compra AS raw_date
          FROM insumo_compras c
-         JOIN insumos i ON i.id = c.insumo_id
+         LEFT JOIN insumos i ON i.id = c.insumo_id
          ORDER BY c.data_compra DESC
          LIMIT 5
        )
@@ -182,6 +198,9 @@ export async function getDashboardFinanceiro(
     periodo,
     receita_total: receitaTotal,
     gastos_insumos: gastosInsumos,
+    gastos_estoque: gastosEstoque,
+    gastos_avulsos: gastosAvulsos,
+    gastos_investimento: gastosInvestimento,
     resultado_operacional: resultadoOperacional,
     margem_bruta_pct: margemBrutaPct,
     ticket_medio: ticketMedio,

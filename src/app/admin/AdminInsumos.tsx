@@ -784,14 +784,21 @@ function InsumoForm({
 function ModalRegistrarCompra({
   insumos,
   insumoInicialId,
+  modoInicial = "PADRAO",
   aberto,
   onFechar,
 }: {
   insumos: Insumo[];
   insumoInicialId?: string | null;
+  modoInicial?: "PADRAO" | "AVULSO";
   aberto: boolean;
   onFechar: () => void;
 }) {
+  const [modoCompra, setModoCompra] = useState<"PADRAO" | "AVULSO">(
+    modoInicial || (insumoInicialId ? "PADRAO" : "PADRAO")
+  );
+  const [categoriaGasto, setCategoriaGasto] = useState<"GASTO" | "INVESTIMENTO">("GASTO");
+  const [descricaoAvulsa, setDescricaoAvulsa] = useState("");
   const [insumoId, setInsumoId] = useState(
     insumoInicialId || (insumos[0]?.id ?? "")
   );
@@ -820,12 +827,20 @@ function ModalRegistrarCompra({
     e.preventDefault();
     setErro(null);
 
-    if (!insumoId) {
-      setErro("Selecione um insumo.");
-      return;
+    if (modoCompra === "PADRAO") {
+      if (!insumoId) {
+        setErro("Selecione um insumo do estoque.");
+        return;
+      }
+    } else {
+      if (!descricaoAvulsa.trim() && !insumoId) {
+        setErro("Informe a descrição do insumo ou item avulso.");
+        return;
+      }
     }
+
     if (!qtdNum || qtdNum <= 0) {
-      setErro("A quantidade comprada deve ser maior que zero.");
+      setErro("A quantidade deve ser maior que zero.");
       return;
     }
     if (!precoTotalNum || precoTotalNum <= 0) {
@@ -836,7 +851,12 @@ function ModalRegistrarCompra({
     setEnviando(true);
     try {
       const fd = new FormData();
-      fd.set("insumo_id", insumoId);
+      fd.set("tipo_compra", modoCompra);
+      fd.set("categoria_gasto", categoriaGasto);
+      if (insumoId) fd.set("insumo_id", insumoId);
+      if (modoCompra === "AVULSO" && descricaoAvulsa.trim()) {
+        fd.set("descricao_avulsa", descricaoAvulsa.trim());
+      }
       fd.set("quantidade", String(qtdNum));
       fd.set("preco_total", String(precoTotalNum));
       if (estabelecimento.trim()) fd.set("estabelecimento", estabelecimento.trim());
@@ -846,7 +866,7 @@ function ModalRegistrarCompra({
       await registrarCompraInsumoAction(fd);
       onFechar();
     } catch (err) {
-      setErro(err instanceof Error ? err.message : "Erro ao registrar compra.");
+      setErro(err instanceof Error ? err.message : "Erro ao registrar.");
     } finally {
       setEnviando(false);
     }
@@ -862,10 +882,12 @@ function ModalRegistrarCompra({
             </div>
             <div>
               <h3 className="font-bold text-chocolate text-base sm:text-lg">
-                Registrar Compra de Insumo
+                Registrar Saída / Compra de Insumo
               </h3>
               <p className="text-xs text-chocolate-muted">
-                Repõe o estoque e recalcula o custo unitário automaticamente
+                {modoCompra === "PADRAO"
+                  ? "Repõe estoque e recalcula custos das fichas técnicas"
+                  : "Lançamento avulso para contabilidade financeira de gastos ou investimento"}
               </p>
             </div>
           </div>
@@ -878,6 +900,34 @@ function ModalRegistrarCompra({
           </button>
         </div>
 
+        {/* Segmented Button: Estoque vs Insumo Avulso */}
+        <div className="flex items-center rounded-xl bg-cream/70 p-1 border border-rose-light mb-4">
+          <button
+            type="button"
+            onClick={() => setModoCompra("PADRAO")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${
+              modoCompra === "PADRAO"
+                ? "bg-white text-chocolate shadow-xs"
+                : "text-chocolate-muted hover:text-chocolate"
+            }`}
+          >
+            <Boxes className="w-4 h-4" />
+            Insumo do Estoque
+          </button>
+          <button
+            type="button"
+            onClick={() => setModoCompra("AVULSO")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${
+              modoCompra === "AVULSO"
+                ? "bg-rose-pastel text-white shadow-xs"
+                : "text-chocolate-muted hover:text-chocolate"
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            Insumo Avulso (Gasto / Investimento)
+          </button>
+        </div>
+
         {erro && (
           <div className="mb-4 rounded-xl border border-badge-red bg-rose-50 p-3 text-xs text-badge-red-text font-medium">
             {erro}
@@ -885,27 +935,114 @@ function ModalRegistrarCompra({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* SELEÇÃO DO INSUMO */}
-          <div>
-            <label className={labelClass}>Insumo Comprado</label>
-            <select
-              value={insumoId}
-              onChange={(e) => setInsumoId(e.target.value)}
-              required
-              className={inputClass}
-            >
-              {insumos.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.nome} (Estoque atual: {i.estoque_atual} un — Atual: {formatarMoeda(i.preco_embalagem)})
-                </option>
-              ))}
-            </select>
-          </div>
+          {modoCompra === "AVULSO" ? (
+            /* ==========================================================
+               CAMPOS ESPECÍFICOS DO INSUMO AVULSO
+               ========================================================== */
+            <div className="space-y-3.5 bg-rose-light/20 p-3.5 rounded-xl border border-rose-light/60">
+              {/* Classificação Contábil: Gasto vs Investimento */}
+              <div>
+                <label className={labelClass}>Classificação Contábil</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCategoriaGasto("GASTO")}
+                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all ${
+                      categoriaGasto === "GASTO"
+                        ? "bg-white border-rose-pastel shadow-xs ring-1 ring-rose-pastel"
+                        : "bg-warm-white/80 border-rose-light hover:bg-white text-chocolate-muted"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 font-bold text-xs text-chocolate">
+                      🏷️ Gasto Operacional
+                    </span>
+                    <span className="text-[10px] text-chocolate-muted mt-0.5">
+                      Embalagens, descartáveis, gás, insumos pontuais...
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCategoriaGasto("INVESTIMENTO")}
+                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all ${
+                      categoriaGasto === "INVESTIMENTO"
+                        ? "bg-white border-purple-400 shadow-xs ring-1 ring-purple-400"
+                        : "bg-warm-white/80 border-rose-light hover:bg-white text-chocolate-muted"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 font-bold text-xs text-purple-900">
+                      💼 Investimento
+                    </span>
+                    <span className="text-[10px] text-chocolate-muted mt-0.5">
+                      Utensílios, formas, batedeira, maquinário, reformas...
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Descrição do Insumo Avulso */}
+              <div>
+                <label className={labelClass}>
+                  Descrição do Insumo / Item <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={descricaoAvulsa}
+                  onChange={(e) => setDescricaoAvulsa(e.target.value)}
+                  placeholder="Ex: Embalagens kraft para torta, Batedeira planetária, Gás de cozinha..."
+                  className={inputClass}
+                />
+              </div>
+
+              {/* Insumo de Referência (Opcional) */}
+              <div>
+                <label className={labelClass}>Insumo de Referência (Opcional)</label>
+                <select
+                  value={insumoId}
+                  onChange={(e) => setInsumoId(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Nenhum (Item avulso / compra sob medida)</option>
+                  {insumos.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : (
+            /* ==========================================================
+               CAMPOS DO INSUMO DO ESTOQUE
+               ========================================================== */
+            <div>
+              <label className={labelClass}>
+                Insumo Comprado <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={insumoId}
+                onChange={(e) => setInsumoId(e.target.value)}
+                required
+                className={inputClass}
+              >
+                {insumos.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.nome} (Estoque atual: {i.estoque_atual} un — Atual: {formatarMoeda(i.preco_embalagem)})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* QUANTIDADE COMPRADA */}
             <div>
-              <label className={labelClass}>Quantidade Comprada (embalagens/un)</label>
+              <label className={labelClass}>
+                {modoCompra === "PADRAO"
+                  ? "Quantidade (embalagens/un)"
+                  : "Quantidade (unidades)"}
+              </label>
               <input
                 type="number"
                 min="0.1"
@@ -916,14 +1053,16 @@ function ModalRegistrarCompra({
                   const val = e.target.value;
                   setQuantidade(val === "" ? "" : parseFloat(val));
                 }}
-                placeholder="Ex: 5 ou 12"
+                placeholder="Ex: 1 ou 10"
                 className={inputClass}
               />
             </div>
 
             {/* PREÇO TOTAL PAGO */}
             <div>
-              <label className={labelClass}>Preço Total Pago (R$)</label>
+              <label className={labelClass}>
+                Preço Total Pago (R$) <span className="text-red-500">*</span>
+              </label>
               <input
                 type="number"
                 min="0.01"
@@ -940,24 +1079,41 @@ function ModalRegistrarCompra({
             </div>
           </div>
 
-          {/* CARD RESUMO DA COMPRA */}
-          <div className="rounded-xl border border-rose-light bg-cream/50 p-3 text-xs space-y-1.5">
-            <div className="flex justify-between items-center text-chocolate font-medium">
-              <span>Custo Unitário Desta Compra:</span>
-              <strong className="text-sm font-bold text-chocolate">
-                {precoUnitarioCalculado > 0 ? formatarMoeda(precoUnitarioCalculado) : "R$ 0,00"} / un
-              </strong>
+          {/* CARD RESUMO DA COMPRA / LANÇAMENTO */}
+          {modoCompra === "PADRAO" ? (
+            <div className="rounded-xl border border-rose-light bg-cream/50 p-3 text-xs space-y-1.5">
+              <div className="flex justify-between items-center text-chocolate font-medium">
+                <span>Custo Unitário Desta Compra:</span>
+                <strong className="text-sm font-bold text-chocolate">
+                  {precoUnitarioCalculado > 0 ? formatarMoeda(precoUnitarioCalculado) : "R$ 0,00"} / un
+                </strong>
+              </div>
+              <div className="flex justify-between items-center text-chocolate-muted">
+                <span>Novo estoque estimado:</span>
+                <span className="font-semibold text-chocolate">
+                  {novoEstoqueEstimado} un (+{qtdNum} un)
+                </span>
+              </div>
+              <p className="text-[11px] text-chocolate-muted pt-1 border-t border-rose-light/40">
+                💡 O sistema registrará este gasto no dashboard e ajustará o custo base das fichas técnicas por média ponderada.
+              </p>
             </div>
-            <div className="flex justify-between items-center text-chocolate-muted">
-              <span>Novo estoque estimado:</span>
-              <span className="font-semibold text-chocolate">
-                {novoEstoqueEstimado} un (+{qtdNum} un)
-              </span>
+          ) : (
+            <div className="rounded-xl border border-rose-light bg-cream/50 p-3 text-xs space-y-1.5">
+              <div className="flex justify-between items-center text-chocolate font-medium">
+                <span>Total a ser contabilizado:</span>
+                <strong className="text-sm font-bold text-chocolate">
+                  {precoTotalNum > 0 ? formatarMoeda(precoTotalNum) : "R$ 0,00"}
+                </strong>
+              </div>
+              <div className="flex items-center gap-1.5 text-rose-pastel font-semibold text-[11px] pt-1 border-t border-rose-light/40">
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  Não interfere no estoque. Será registrado como {categoriaGasto === "INVESTIMENTO" ? "investimento" : "gasto operacional"} nas saídas do Dashboard.
+                </span>
+              </div>
             </div>
-            <p className="text-[11px] text-chocolate-muted pt-1 border-t border-rose-light/40">
-              💡 O sistema registrará este gasto como saída operacional no dashboard e ajustará o custo base das fichas técnicas por média ponderada.
-            </p>
-          </div>
+          )}
 
           {/* ESTABELECIMENTO / FORNECEDOR */}
           <div>
@@ -968,7 +1124,7 @@ function ModalRegistrarCompra({
                 type="text"
                 value={estabelecimento}
                 onChange={(e) => setEstabelecimento(e.target.value)}
-                placeholder="Ex: Atacadão, Sam's Club, Assaí, Mercado Livre..."
+                placeholder="Ex: Atacadão, Sam's Club, Assaí, Mercado Livre, Shopee..."
                 className={`${inputClass} pl-9`}
               />
             </div>
@@ -992,7 +1148,7 @@ function ModalRegistrarCompra({
               rows={2}
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
-              placeholder="Ex: Promoção relâmpago, fardo fechado..."
+              placeholder="Ex: Promoção relâmpago, fardo fechado, garantia de 1 ano..."
               className={inputClass}
             />
           </div>
@@ -1011,7 +1167,11 @@ function ModalRegistrarCompra({
               disabled={enviando}
               className="w-full sm:w-1/2 rounded-full bg-rose-pastel px-4 py-2.5 text-xs font-semibold text-white hover:bg-chocolate-light transition-colors disabled:opacity-60 shadow-sm text-center"
             >
-              {enviando ? "Registrando Entrada…" : "Confirmar Compra"}
+              {enviando
+                ? "Gravando…"
+                : modoCompra === "AVULSO"
+                ? "Lançar Insumo / Gasto Avulso"
+                : "Confirmar Compra"}
             </button>
           </div>
         </form>
@@ -1047,9 +1207,13 @@ export default function AdminInsumos({
 
   // Estados de compras
   const [modalCompraAberto, setModalCompraAberto] = useState(false);
+  const [modoCompraInicial, setModoCompraInicial] = useState<"PADRAO" | "AVULSO">("PADRAO");
   const [insumoParaComprar, setInsumoParaComprar] = useState<string | null>(null);
   const [filtroInsumoGrafico, setFiltroInsumoGrafico] = useState<string>("TODOS");
   const [buscaCompras, setBuscaCompras] = useState("");
+  const [filtroTipoCompra, setFiltroTipoCompra] = useState<
+    "TODOS" | "PADRAO" | "AVULSO_GASTO" | "AVULSO_INVESTIMENTO"
+  >("TODOS");
 
   // Estados da Aba 1 (Estoque)
   const [criandoInsumo, setCriandoInsumo] = useState(false);
@@ -1081,16 +1245,52 @@ export default function AdminInsumos({
     );
   }, [insumosBase, buscaBase]);
 
+  // Contagens de compras por tipo
+  const totalEstoque = useMemo(
+    () => compras.filter((c) => c.tipo_compra !== "AVULSO").length,
+    [compras]
+  );
+  const totalGastosAvulsos = useMemo(
+    () =>
+      compras.filter(
+        (c) => c.tipo_compra === "AVULSO" && c.categoria_gasto !== "INVESTIMENTO"
+      ).length,
+    [compras]
+  );
+  const totalInvestimentos = useMemo(
+    () =>
+      compras.filter(
+        (c) => c.tipo_compra === "AVULSO" && c.categoria_gasto === "INVESTIMENTO"
+      ).length,
+    [compras]
+  );
+
   // Compras filtradas
   const comprasFiltradas = useMemo(() => {
     const termo = normalizarTexto(buscaCompras);
-    if (!termo) return compras;
     return compras.filter((c) => {
+      if (filtroTipoCompra === "PADRAO" && c.tipo_compra === "AVULSO") return false;
+      if (
+        filtroTipoCompra === "AVULSO_GASTO" &&
+        (c.tipo_compra !== "AVULSO" || c.categoria_gasto === "INVESTIMENTO")
+      ) {
+        return false;
+      }
+      if (
+        filtroTipoCompra === "AVULSO_INVESTIMENTO" &&
+        (c.tipo_compra !== "AVULSO" || c.categoria_gasto !== "INVESTIMENTO")
+      ) {
+        return false;
+      }
+
+      if (!termo) return true;
       const matchNome = c.insumo_nome && normalizarTexto(c.insumo_nome).includes(termo);
+      const matchDesc = c.descricao_avulsa && normalizarTexto(c.descricao_avulsa).includes(termo);
       const matchEstab = c.estabelecimento && normalizarTexto(c.estabelecimento).includes(termo);
-      return matchNome || matchEstab;
+      const matchObs = c.observacoes && normalizarTexto(c.observacoes).includes(termo);
+      return matchNome || matchDesc || matchEstab || matchObs;
     });
-  }, [compras, buscaCompras]);
+  }, [compras, buscaCompras, filtroTipoCompra]);
 
   // Dados do gráfico de preços filtrados
   const dadosGraficoPrecos = useMemo(() => {
@@ -1214,12 +1414,26 @@ export default function AdminInsumos({
                 type="button"
                 onClick={() => {
                   setInsumoParaComprar(null);
+                  setModoCompraInicial("PADRAO");
                   setModalCompraAberto(true);
                 }}
                 className="flex items-center justify-center gap-2 rounded-full bg-cream border border-rose-light px-4 py-2.5 text-xs sm:text-sm font-semibold text-chocolate hover:bg-rose-pastel hover:text-white transition-colors shadow-xs"
               >
                 <ShoppingCart className="w-4 h-4 text-rose-pastel" />
-                Repor Estoque / Compra
+                Repor Estoque (Insumo)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setInsumoParaComprar(null);
+                  setModoCompraInicial("AVULSO");
+                  setModalCompraAberto(true);
+                }}
+                className="flex items-center justify-center gap-2 rounded-full bg-warm-white border border-rose-pastel/60 px-4 py-2.5 text-xs sm:text-sm font-semibold text-rose-pastel hover:bg-rose-pastel hover:text-white transition-colors shadow-xs"
+              >
+                <Sparkles className="w-4 h-4" />
+                + Insumo / Gasto Avulso
               </button>
 
               <button
@@ -1318,17 +1532,33 @@ export default function AdminInsumos({
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setInsumoParaComprar(null);
-                setModalCompraAberto(true);
-              }}
-              className="flex items-center justify-center gap-2 rounded-full bg-rose-pastel px-5 py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-chocolate-light transition-colors shadow-sm w-full sm:w-auto shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              Registrar Compra de Insumo
-            </button>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setInsumoParaComprar(null);
+                  setModoCompraInicial("PADRAO");
+                  setModalCompraAberto(true);
+                }}
+                className="flex items-center justify-center gap-2 rounded-full bg-cream border border-rose-light px-4 py-2.5 text-xs sm:text-sm font-semibold text-chocolate hover:bg-rose-pastel hover:text-white transition-colors shadow-xs"
+              >
+                <Boxes className="w-4 h-4 text-rose-pastel" />
+                Repor Insumo (Estoque)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setInsumoParaComprar(null);
+                  setModoCompraInicial("AVULSO");
+                  setModalCompraAberto(true);
+                }}
+                className="flex items-center justify-center gap-2 rounded-full bg-rose-pastel px-5 py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-chocolate-light transition-colors shadow-sm"
+              >
+                <Sparkles className="w-4 h-4" />
+                + Insumo / Gasto Avulso
+              </button>
+            </div>
           </div>
 
           {/* CARD COM GRÁFICO DE FLUTUAÇÃO DE PREÇOS */}
@@ -1372,7 +1602,7 @@ export default function AdminInsumos({
                 <Search className="w-4 h-4 absolute left-3 top-3 text-chocolate-muted" />
                 <input
                   type="text"
-                  placeholder="Buscar compra por insumo ou fornecedor..."
+                  placeholder="Buscar compra por insumo, descrição ou fornecedor..."
                   value={buscaCompras}
                   onChange={(e) => setBuscaCompras(e.target.value)}
                   className={`${inputClass} pl-9`}
@@ -1382,19 +1612,71 @@ export default function AdminInsumos({
               <span className="text-xs font-semibold text-chocolate-muted">
                 {comprasFiltradas.length}{" "}
                 {comprasFiltradas.length === 1
-                  ? "compra registrada"
-                  : "compras registradas"}
+                  ? "registro encontrado"
+                  : "registros encontrados"}
               </span>
+            </div>
+
+            {/* Filtros rápidos: Todos, Estoque, Avulsos, Investimentos */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setFiltroTipoCompra("TODOS")}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                  filtroTipoCompra === "TODOS"
+                    ? "bg-rose-pastel text-white shadow-2xs"
+                    : "bg-cream text-chocolate-muted hover:text-chocolate border border-rose-light"
+                }`}
+              >
+                Todas as Saídas ({compras.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFiltroTipoCompra("PADRAO")}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition-all flex items-center gap-1 ${
+                  filtroTipoCompra === "PADRAO"
+                    ? "bg-rose-pastel text-white shadow-2xs"
+                    : "bg-cream text-chocolate-muted hover:text-chocolate border border-rose-light"
+                }`}
+              >
+                <Boxes className="w-3 h-3" />
+                Estoque ({totalEstoque})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFiltroTipoCompra("AVULSO_GASTO")}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition-all flex items-center gap-1 ${
+                  filtroTipoCompra === "AVULSO_GASTO"
+                    ? "bg-rose-pastel text-white shadow-2xs"
+                    : "bg-cream text-chocolate-muted hover:text-chocolate border border-rose-light"
+                }`}
+              >
+                <Sparkles className="w-3 h-3" />
+                Insumos Avulsos / Gastos ({totalGastosAvulsos})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFiltroTipoCompra("AVULSO_INVESTIMENTO")}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition-all flex items-center gap-1 ${
+                  filtroTipoCompra === "AVULSO_INVESTIMENTO"
+                    ? "bg-purple-700 text-white shadow-2xs"
+                    : "bg-cream text-chocolate-muted hover:text-chocolate border border-rose-light"
+                }`}
+              >
+                <Sparkles className="w-3 h-3" />
+                Investimentos ({totalInvestimentos})
+              </button>
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-rose-light bg-white shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[720px]">
+                <table className="w-full text-sm min-w-[760px]">
                   <thead className="bg-cream text-left text-chocolate-muted border-b border-rose-light/60">
                     <tr>
                       <th className="px-4 py-3 font-semibold whitespace-nowrap">Data</th>
-                      <th className="px-4 py-3 font-semibold whitespace-nowrap">Insumo</th>
-                      <th className="px-4 py-3 font-semibold whitespace-nowrap">Qtd. Comprada</th>
+                      <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo</th>
+                      <th className="px-4 py-3 font-semibold whitespace-nowrap">Insumo / Descrição</th>
+                      <th className="px-4 py-3 font-semibold whitespace-nowrap">Qtd.</th>
                       <th className="px-4 py-3 font-semibold whitespace-nowrap">Preço Unitário</th>
                       <th className="px-4 py-3 font-semibold whitespace-nowrap">Valor Total</th>
                       <th className="px-4 py-3 font-semibold whitespace-nowrap">Fornecedor / Mercado</th>
@@ -1405,55 +1687,85 @@ export default function AdminInsumos({
                     {comprasFiltradas.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={7}
+                          colSpan={8}
                           className="px-4 py-12 text-center text-chocolate-muted"
                         >
-                          Nenhuma compra de insumo encontrada. Clique em &quot;Registrar Compra de Insumo&quot; para registrar gastos e repor estoque!
+                          Nenhum lançamento de insumo ou compra encontrado. Clique em &quot;+ Insumo / Gasto Avulso&quot; ou &quot;Repor Insumo&quot; para registrar saídas financeiras!
                         </td>
                       </tr>
                     ) : (
-                      comprasFiltradas.map((compra) => (
-                        <tr
-                          key={compra.id}
-                          className="hover:bg-cream/20 transition-colors"
-                        >
-                          <td className="px-4 py-3 text-chocolate whitespace-nowrap font-medium">
-                            {compra.data_compra.slice(8, 10)}/
-                            {compra.data_compra.slice(5, 7)}/
-                            {compra.data_compra.slice(0, 4)}
-                          </td>
-                          <td className="px-4 py-3 font-semibold text-chocolate">
-                            {compra.insumo_nome || "Insumo"}
-                          </td>
-                          <td className="px-4 py-3 text-chocolate whitespace-nowrap font-medium">
-                            {compra.quantidade} un
-                          </td>
-                          <td className="px-4 py-3 text-chocolate whitespace-nowrap font-medium">
-                            {formatarMoeda(compra.preco_unitario)} / un
-                          </td>
-                          <td className="px-4 py-3 text-rose-700 font-bold whitespace-nowrap">
-                            {formatarMoeda(compra.preco_total)}
-                          </td>
-                          <td className="px-4 py-3 text-chocolate">
-                            {compra.estabelecimento ? (
-                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-chocolate bg-cream px-2 py-0.5 rounded-md border border-rose-light/60">
-                                <Store className="w-3 h-3 text-rose-pastel" />
-                                {compra.estabelecimento}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-chocolate-muted italic">
-                                Não informado
-                              </span>
-                            )}
-                          </td>
-                          <td
-                            className="px-4 py-3 text-xs text-chocolate-muted max-w-[200px] truncate"
-                            title={compra.observacoes || ""}
+                      comprasFiltradas.map((compra) => {
+                        const isAvulso = compra.tipo_compra === "AVULSO";
+                        const isInvestimento = isAvulso && compra.categoria_gasto === "INVESTIMENTO";
+
+                        return (
+                          <tr
+                            key={compra.id}
+                            className="hover:bg-cream/20 transition-colors"
                           >
-                            {compra.observacoes || "—"}
-                          </td>
-                        </tr>
-                      ))
+                            <td className="px-4 py-3 text-chocolate whitespace-nowrap font-medium">
+                              {compra.data_compra.slice(8, 10)}/
+                              {compra.data_compra.slice(5, 7)}/
+                              {compra.data_compra.slice(0, 4)}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              {isInvestimento ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-0.5 text-xs font-bold">
+                                  <Sparkles className="w-3 h-3 text-purple-600" />
+                                  Investimento
+                                </span>
+                              ) : isAvulso ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-rose-pastel/15 text-rose-pastel border border-rose-pastel/30 px-2.5 py-0.5 text-xs font-bold">
+                                  <Sparkles className="w-3 h-3 text-rose-pastel" />
+                                  Insumo Avulso
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-cream text-chocolate-muted border border-rose-light px-2.5 py-0.5 text-xs font-semibold">
+                                  <Boxes className="w-3 h-3 text-chocolate-muted" />
+                                  Estoque
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-chocolate">
+                              <div className="flex flex-col">
+                                <span>{compra.descricao_avulsa ?? compra.insumo_nome ?? "Insumo"}</span>
+                                {isAvulso && compra.descricao_avulsa && compra.insumo_nome && (
+                                  <span className="text-[11px] font-normal text-chocolate-muted">
+                                    Ref: {compra.insumo_nome}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-chocolate whitespace-nowrap font-medium">
+                              {compra.quantidade} un
+                            </td>
+                            <td className="px-4 py-3 text-chocolate whitespace-nowrap font-medium">
+                              {formatarMoeda(compra.preco_unitario)} / un
+                            </td>
+                            <td className="px-4 py-3 text-rose-700 font-bold whitespace-nowrap">
+                              {formatarMoeda(compra.preco_total)}
+                            </td>
+                            <td className="px-4 py-3 text-chocolate">
+                              {compra.estabelecimento ? (
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-chocolate bg-cream px-2 py-0.5 rounded-md border border-rose-light/60">
+                                  <Store className="w-3 h-3 text-rose-pastel" />
+                                  {compra.estabelecimento}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-chocolate-muted italic">
+                                  Não informado
+                                </span>
+                              )}
+                            </td>
+                            <td
+                              className="px-4 py-3 text-xs text-chocolate-muted max-w-[200px] truncate"
+                              title={compra.observacoes || ""}
+                            >
+                              {compra.observacoes || "—"}
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -1560,15 +1872,17 @@ export default function AdminInsumos({
         </div>
       )}
 
-      {/* MODAL PARA REGISTRAR COMPRA / REPOR ESTOQUE */}
+      {/* MODAL PARA REGISTRAR COMPRA / INSUMO AVULSO */}
       <ModalRegistrarCompra
-        key={`${insumoParaComprar ?? "novo"}-${modalCompraAberto ? "aberto" : "fechado"}`}
+        key={`${insumoParaComprar ?? "novo"}-${modoCompraInicial}-${modalCompraAberto ? "aberto" : "fechado"}`}
         insumos={insumos}
         insumoInicialId={insumoParaComprar}
+        modoInicial={modoCompraInicial}
         aberto={modalCompraAberto}
         onFechar={() => {
           setModalCompraAberto(false);
           setInsumoParaComprar(null);
+          setModoCompraInicial("PADRAO");
         }}
       />
     </div>

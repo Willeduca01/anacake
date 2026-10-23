@@ -14,6 +14,8 @@ import {
   type InsumoInput,
   type InsumoBaseInput,
   type InsumoCompraInput,
+  type TipoCompraInsumo,
+  type CategoriaGastoInsumo,
   type TipoMedida,
   type FormatoCompra,
 } from "@/lib/insumos";
@@ -169,14 +171,29 @@ export async function excluirInsumoAction(formData: FormData) {
 
 export async function registrarCompraInsumoAction(formData: FormData) {
   await exigirSessaoAdmin();
+  const tipoCompraRaw = String(formData.get("tipo_compra") ?? "PADRAO");
+  const tipoCompra: TipoCompraInsumo = tipoCompraRaw === "AVULSO" ? "AVULSO" : "PADRAO";
+  const categoriaGastoRaw = String(formData.get("categoria_gasto") ?? "GASTO");
+  const categoriaGasto: CategoriaGastoInsumo =
+    categoriaGastoRaw === "INVESTIMENTO" ? "INVESTIMENTO" : "GASTO";
+
   const insumoId = String(formData.get("insumo_id") ?? "").trim();
-  const quantidade = Number(formData.get("quantidade"));
+  const descricaoAvulsa = sanitizarTexto(String(formData.get("descricao_avulsa") ?? "")).trim();
+  const quantidadeRaw = formData.get("quantidade");
+  const quantidade = quantidadeRaw !== null && quantidadeRaw !== "" ? Number(quantidadeRaw) : 1;
   const precoTotal = Number(formData.get("preco_total"));
   const estabelecimento = sanitizarTexto(String(formData.get("estabelecimento") ?? "")).trim();
   const dataCompra = String(formData.get("data_compra") ?? "").trim();
   const observacoes = sanitizarTexto(String(formData.get("observacoes") ?? "")).trim();
 
-  if (!insumoId) throw new Error("Insumo é obrigatório.");
+  if (tipoCompra === "PADRAO") {
+    if (!insumoId) throw new Error("Insumo é obrigatório.");
+  } else {
+    if (!descricaoAvulsa && !insumoId) {
+      throw new Error("Informe a descrição do insumo avulso.");
+    }
+  }
+
   if (Number.isNaN(quantidade) || quantidade <= 0) {
     throw new Error("Quantidade comprada deve ser maior que zero.");
   }
@@ -185,7 +202,10 @@ export async function registrarCompraInsumoAction(formData: FormData) {
   }
 
   const input: InsumoCompraInput = {
-    insumo_id: insumoId,
+    insumo_id: insumoId || null,
+    tipo_compra: tipoCompra,
+    descricao_avulsa: descricaoAvulsa || null,
+    categoria_gasto: categoriaGasto,
     quantidade,
     preco_total: precoTotal,
     estabelecimento: estabelecimento || null,

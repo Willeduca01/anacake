@@ -123,3 +123,15 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 **Impacto:** Horários no painel admin, tabelas de vendas, movimentações recentes e relatórios agora batem 100% com o horário local de São Paulo.
 
+### 2026-10-23 - Insumos Avulsos para Contabilidade de Gastos e Investimentos
+
+**Decisão:** Adicionar o modo de **Insumo Avulso** no registro de compras/saídas (`insumo_compras`), funcionando de forma análoga à "Venda Avulsa": quando cadastrado, **não interfere nas quantidades nem nos custos médios dos insumos de estoque**, mas é computado diretamente na contabilidade financeira do Dashboard como saída operacional ou investimento. Novas colunas em `insumo_compras`: `tipo_compra` (`'PADRAO'` / `'AVULSO'`), `descricao_avulsa` e `categoria_gasto` (`'GASTO'` / `'INVESTIMENTO'`), tornando `insumo_id` anulável (`DROP NOT NULL`).
+
+**Contexto:** Nem todas as despesas e insumos adquiridos são matérias-primas fracionadas para fichas técnicas (ex: embalagens avulsas, gás, descartáveis, utensílios duráveis, batedeira, reformas). Antes, qualquer saída exigia vincular a um insumo existente no estoque, forçando aumento de estoque e recalculo de custo médio.
+
+**Impacto:**
+- **Modal de Registro:** agora possui navegação em abas (*Insumo do Estoque* vs *Insumo Avulso*), permitindo escolher classificação contábil (Gasto Operacional ou Investimento), descrição do item, fornecedor, quantidade e valor total.
+- **Tabela de Histórico de Compras:** exibe tags visuais distintas (*Insumo Avulso*, *Investimento*, *Estoque*), descrição customizada e filtros rápidos para filtrar por tipo de saída.
+- **Dashboard:** `gastos_insumos` agrega todas as saídas, com exibição detalhada de composição (*Estoque*, *Avulsos*, *Investimentos*) no card de Gastos e inclusão nas *Últimas Movimentações* via `LEFT JOIN`.
+- **Migração:** script `scripts/migrate-insumos-avulsos.mjs` idempotente (`ALTER TABLE insumo_compras ALTER COLUMN insumo_id DROP NOT NULL; ALTER TABLE insumo_compras ADD COLUMN IF NOT EXISTS tipo_compra ...`).
+

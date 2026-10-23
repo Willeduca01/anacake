@@ -50,9 +50,15 @@ export interface InsumoInput {
   estoque_minimo?: number;
 }
 
+export type TipoCompraInsumo = "PADRAO" | "AVULSO";
+export type CategoriaGastoInsumo = "GASTO" | "INVESTIMENTO";
+
 export interface InsumoCompra {
   id: string;
-  insumo_id: string;
+  insumo_id: string | null;
+  tipo_compra?: TipoCompraInsumo;
+  descricao_avulsa?: string | null;
+  categoria_gasto?: CategoriaGastoInsumo;
   insumo_nome?: string;
   tipo_medida?: TipoMedida;
   quantidade: number;
@@ -64,7 +70,10 @@ export interface InsumoCompra {
 }
 
 export interface InsumoCompraInput {
-  insumo_id: string;
+  insumo_id?: string | null;
+  tipo_compra?: TipoCompraInsumo;
+  descricao_avulsa?: string | null;
+  categoria_gasto?: CategoriaGastoInsumo;
   quantidade: number;
   preco_total: number;
   estabelecimento?: string | null;
@@ -395,6 +404,79 @@ export async function registrarCompraInsumo(
   try {
     await client.query("BEGIN");
 
+    const isAvulso = input.tipo_compra === "AVULSO" || (!input.insumo_id && !!input.descricao_avulsa);
+    const tipoCompra: TipoCompraInsumo = isAvulso ? "AVULSO" : "PADRAO";
+    const categoriaGasto: CategoriaGastoInsumo = input.categoria_gasto === "INVESTIMENTO" ? "INVESTIMENTO" : "GASTO";
+
+    if (isAvulso) {
+      // Compra / Insumo Avulso: não interfere no estoque nem no custo de fichas técnicas
+      if (!input.descricao_avulsa && !input.insumo_id) {
+        throw new Error("Informe a descrição do insumo avulso.");
+      }
+
+      let refNome: string | undefined;
+      let refTipoMedida: TipoMedida | undefined;
+      if (input.insumo_id) {
+        const { rows: refRows } = await client.query<{ nome: string; tipo_medida: TipoMedida }>(
+          "SELECT nome, tipo_medida FROM insumos WHERE id = $1",
+          [input.insumo_id]
+        );
+        if (refRows.length > 0) {
+          refNome = refRows[0].nome;
+          refTipoMedida = refRows[0].tipo_medida;
+        }
+      }
+
+      const precoUnitario = Number((input.preco_total / (input.quantidade || 1)).toFixed(4));
+
+      const { rows: compraRows } = await client.query<InsumoCompra>(
+        `INSERT INTO insumo_compras (
+           insumo_id, 
+           tipo_compra,
+           descricao_avulsa,
+           categoria_gasto,
+           quantidade, 
+           preco_total, 
+           preco_unitario, 
+           estabelecimento, 
+           data_compra, 
+           observacoes
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, CURRENT_TIMESTAMP), $10)
+         RETURNING 
+           id, 
+           insumo_id, 
+           COALESCE(tipo_compra, 'AVULSO') AS tipo_compra,
+           descricao_avulsa,
+           COALESCE(categoria_gasto, 'GASTO') AS categoria_gasto,
+           quantidade::float8 AS quantidade, 
+           preco_total::float8 AS preco_total, 
+           preco_unitario::float8 AS preco_unitario, 
+           estabelecimento, 
+           to_char(data_compra, 'YYYY-MM-DD"T"HH24:MI:SS') AS data_compra, 
+           observacoes`,
+        [
+          input.insumo_id || null,
+          tipoCompra,
+          input.descricao_avulsa || null,
+          categoriaGasto,
+          input.quantidade || 1,
+          input.preco_total,
+          precoUnitario,
+          input.estabelecimento || null,
+          input.data_compra || null,
+          input.observacoes || null,
+        ]
+      );
+
+      await client.query("COMMIT");
+      return {
+        ...compraRows[0],
+        insumo_nome: input.descricao_avulsa || refNome || "Insumo Avulso",
+        tipo_medida: refTipoMedida,
+      };
+    }
+
     // 1. Busca e bloqueia o insumo para atualização
     const { rows: insumosRows } = await client.query<Insumo>(
       `SELECT 
@@ -419,6 +501,9 @@ export async function registrarCompraInsumo(
     const { rows: compraRows } = await client.query<InsumoCompra>(
       `INSERT INTO insumo_compras (
          insumo_id, 
+         tipo_compra,
+         descricao_avulsa,
+         categoria_gasto,
          quantidade, 
          preco_total, 
          preco_unitario, 
@@ -426,10 +511,13 @@ export async function registrarCompraInsumo(
          data_compra, 
          observacoes
        )
-       VALUES ($1, $2, $3, $4, $5, COALESCE($6, CURRENT_TIMESTAMP), $7)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, CURRENT_TIMESTAMP), $10)
        RETURNING 
          id, 
          insumo_id, 
+         COALESCE(tipo_compra, 'PADRAO') AS tipo_compra,
+         descricao_avulsa,
+         COALESCE(categoria_gasto, 'GASTO') AS categoria_gasto,
          quantidade::float8 AS quantidade, 
          preco_total::float8 AS preco_total, 
          preco_unitario::float8 AS preco_unitario, 
@@ -438,6 +526,9 @@ export async function registrarCompraInsumo(
          observacoes`,
       [
         input.insumo_id,
+        "PADRAO",
+        null,
+        categoriaGasto,
         input.quantidade,
         input.preco_total,
         precoUnitario,
@@ -496,13 +587,16 @@ export async function registrarCompraInsumo(
 
 export async function listarComprasInsumos(
   insumoId?: string,
-  limit = 50
+  limit = 100
 ): Promise<InsumoCompra[]> {
   const query = insumoId
     ? `SELECT 
          c.id, 
          c.insumo_id, 
-         i.nome AS insumo_nome,
+         COALESCE(c.tipo_compra, 'PADRAO') AS tipo_compra,
+         c.descricao_avulsa,
+         COALESCE(c.categoria_gasto, 'GASTO') AS categoria_gasto,
+         COALESCE(c.descricao_avulsa, i.nome, 'Insumo Avulso') AS insumo_nome,
          i.tipo_medida,
          c.quantidade::float8 AS quantidade, 
          c.preco_total::float8 AS preco_total, 
@@ -511,14 +605,17 @@ export async function listarComprasInsumos(
          to_char(c.data_compra, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS data_compra, 
          c.observacoes
        FROM insumo_compras c
-       JOIN insumos i ON i.id = c.insumo_id
+       LEFT JOIN insumos i ON i.id = c.insumo_id
        WHERE c.insumo_id = $1
        ORDER BY c.data_compra DESC, c.id DESC
        LIMIT $2`
     : `SELECT 
          c.id, 
          c.insumo_id, 
-         i.nome AS insumo_nome,
+         COALESCE(c.tipo_compra, 'PADRAO') AS tipo_compra,
+         c.descricao_avulsa,
+         COALESCE(c.categoria_gasto, 'GASTO') AS categoria_gasto,
+         COALESCE(c.descricao_avulsa, i.nome, 'Insumo Avulso') AS insumo_nome,
          i.tipo_medida,
          c.quantidade::float8 AS quantidade, 
          c.preco_total::float8 AS preco_total, 
@@ -527,7 +624,7 @@ export async function listarComprasInsumos(
          to_char(c.data_compra, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM') AS data_compra, 
          c.observacoes
        FROM insumo_compras c
-       JOIN insumos i ON i.id = c.insumo_id
+       LEFT JOIN insumos i ON i.id = c.insumo_id
        ORDER BY c.data_compra DESC, c.id DESC
        LIMIT $1`;
 

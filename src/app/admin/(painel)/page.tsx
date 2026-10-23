@@ -122,11 +122,11 @@ export default async function DashboardPage({
           </p>
         </div>
 
-        {/* 2. Gastos com Insumos */}
+        {/* 2. Gastos com Insumos & Despesas */}
         <div className="rounded-2xl border border-rose-light bg-white p-4 sm:p-5 shadow-2xs relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-chocolate-muted uppercase tracking-wider">
-              Gastos com Insumos
+              Gastos & Compras
             </span>
             <div className="w-8 h-8 rounded-full bg-rose-50 text-rose-700 flex items-center justify-center">
               <ArrowDownRight className="w-4 h-4" />
@@ -139,8 +139,19 @@ export default async function DashboardPage({
           </div>
           <p className="mt-1.5 text-[11px] text-chocolate-muted font-medium flex items-center gap-1">
             <Receipt className="w-3 h-3 text-rose-pastel" />
-            {dados.total_compras_insumos} compras registradas
+            {dados.total_compras_insumos} registros de saída
           </p>
+          {(dados.gastos_avulsos > 0 || dados.gastos_investimento > 0) && (
+            <div className="mt-2 pt-2 border-t border-rose-light/50 flex flex-wrap gap-x-2 gap-y-1 text-[10px] text-chocolate-muted">
+              <span>Estoque: <strong className="text-chocolate">{brl(dados.gastos_estoque)}</strong></span>
+              {dados.gastos_avulsos > 0 && (
+                <span>• Avulsos: <strong className="text-rose-pastel">{brl(dados.gastos_avulsos)}</strong></span>
+              )}
+              {dados.gastos_investimento > 0 && (
+                <span>• Investimento: <strong className="text-purple-700">{brl(dados.gastos_investimento)}</strong></span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 3. Resultado Operacional */}
