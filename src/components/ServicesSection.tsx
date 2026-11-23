@@ -57,7 +57,7 @@ const cardVariants = {
 
 export default function ServicesSection() {
   return (
-    <section id="servicos" className="py-20 sm:py-28 bg-warm-white">
+    <section id="servicos" className="py-20 sm:py-28 bg-warm-white scroll-mt-16 sm:scroll-mt-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
           <span className="inline-block mb-3 text-xs font-semibold uppercase tracking-wider text-rose-pastel">

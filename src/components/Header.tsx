@@ -1,22 +1,102 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, AtSign, Phone, ShoppingBag, Mail } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 
 const navLinks = [
-  { href: "/", label: "Início" },
-  { href: "/#servicos", label: "Serviços" },
-  { href: "/#localizacao", label: "Localização" },
+  { href: "/inicio", label: "Início" },
+  { href: "/inicio#servicos", label: "Serviços" },
+  { href: "/inicio#localizacao", label: "Localização" },
   { href: "/cardapio", label: "Cardápio" },
 ];
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  const [activeHash, setActiveHash] = useState("");
   const { totalItens, toggleSacola } = useCart();
+
+  useEffect(() => {
+    setActiveHash(window.location.hash || "");
+    const updateHash = () => {
+      setActiveHash(window.location.hash || "");
+    };
+    window.addEventListener("hashchange", updateHash);
+    return () => window.removeEventListener("hashchange", updateHash);
+  }, [pathname]);
+
+  // Observer para quando o usuário rolar a página em /inicio
+  useEffect(() => {
+    if (pathname !== "/inicio") return;
+
+    const sections = ["inicio", "servicos", "localizacao"];
+    const elements = sections
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+
+    if (elements.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.find((entry) => entry.isIntersecting);
+        if (visible) {
+          const id = visible.target.id;
+          setActiveHash(id === "inicio" ? "" : "#" + id);
+        }
+      },
+      {
+        rootMargin: "-20% 0px -60% 0px",
+        threshold: 0,
+      }
+    );
+
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [pathname]);
+
+  const isLinkActive = (href: string) => {
+    if (href === "/cardapio") {
+      return pathname === "/cardapio";
+    }
+    if (pathname !== "/inicio") {
+      return false;
+    }
+    if (href === "/inicio#servicos") {
+      return activeHash === "#servicos";
+    }
+    if (href === "/inicio#localizacao") {
+      return activeHash === "#localizacao";
+    }
+    if (href === "/inicio") {
+      return !activeHash || activeHash === "#inicio";
+    }
+    return false;
+  };
+
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href.startsWith("/inicio#")) {
+      const hash = href.split("#")[1];
+      if (pathname === "/inicio") {
+        const el = document.getElementById(hash);
+        if (el) {
+          e.preventDefault();
+          el.scrollIntoView({ behavior: "smooth" });
+          window.history.pushState(null, "", href);
+          setActiveHash("#" + hash);
+        }
+      }
+    } else if (href === "/inicio" && pathname === "/inicio") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.history.pushState(null, "", "/inicio");
+      setActiveHash("");
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-warm-white/95 backdrop-blur-md border-b border-rose-light/70 shadow-xs">
@@ -36,15 +116,30 @@ export default function Header() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-sm font-medium text-chocolate-light hover:text-rose-pastel transition-colors"
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const active = isLinkActive(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={(e) => handleLinkClick(e, link.href)}
+                  className={`text-sm font-medium transition-colors relative py-1 ${
+                    active
+                      ? "text-rose-pastel font-semibold"
+                      : "text-chocolate-light hover:text-rose-pastel"
+                  }`}
+                >
+                  {link.label}
+                  {active && (
+                    <motion.span
+                      layoutId="activeNavIndicator"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-pastel rounded-full"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </Link>
+              );
+            })}
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-3">
@@ -117,17 +212,27 @@ export default function Header() {
             transition={{ duration: 0.3 }}
             className="md:hidden overflow-hidden bg-warm-white border-t border-rose-light"
           >
-            <nav className="flex flex-col px-6 py-4 gap-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="text-sm font-medium text-chocolate-light hover:text-rose-pastel transition-colors"
-                >
-                  {link.label}
-                </Link>
-              ))}
+            <nav className="flex flex-col px-6 py-4 gap-2">
+              {navLinks.map((link) => {
+                const active = isLinkActive(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={(e) => {
+                      setMobileOpen(false);
+                      handleLinkClick(e, link.href);
+                    }}
+                    className={`text-sm font-medium rounded-xl px-3 py-2 transition-colors ${
+                      active
+                        ? "bg-rose-light/40 text-rose-pastel font-semibold"
+                        : "text-chocolate-light hover:text-rose-pastel hover:bg-rose-light/20"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
               <a
                 href="https://wa.me/5519978293375"
                 target="_blank"

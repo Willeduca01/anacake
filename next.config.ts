@@ -18,6 +18,16 @@ const nextConfig: NextConfig = {
         destination: "/cardapio",
         permanent: false,
       },
+      {
+        source: "/servicos",
+        destination: "/inicio#servicos",
+        permanent: false,
+      },
+      {
+        source: "/localizacao",
+        destination: "/inicio#localizacao",
+        permanent: false,
+      },
     ];
   },
 };

@@ -135,3 +135,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **Dashboard:** `gastos_insumos` agrega todas as saídas, com exibição detalhada de composição (*Estoque*, *Avulsos*, *Investimentos*) no card de Gastos e inclusão nas *Últimas Movimentações* via `LEFT JOIN`.
 - **Migração:** script `scripts/migrate-insumos-avulsos.mjs` idempotente (`ALTER TABLE insumo_compras ALTER COLUMN insumo_id DROP NOT NULL; ALTER TABLE insumo_compras ADD COLUMN IF NOT EXISTS tipo_compra ...`).
 
+### 2026-11-23 - Navegação institucional (/inicio, /servicos, /localizacao) com abertura padrão no /cardapio
+
+**Decisão:** Criação da rota `/inicio` contendo as seções institucionais (`HeroSection`, `ServicesSection`, `SeasonalBanner`, `LocationSection`) com scroll suave e identificadores (`#inicio`, `#servicos`, `#localizacao`). A regra de negócio de **sempre iniciar no cardápio** ao acessar a raiz (`/`) foi mantida (redirecionamento de `/` para `/cardapio` no `next.config.ts` e `src/app/page.tsx`). Adicionados redirecionamentos de `/servicos` para `/inicio#servicos` e `/localizacao` para `/inicio#localizacao`. No `Header.tsx` e `Footer.tsx`, os links foram atualizados para `/inicio`, `/inicio#servicos`, `/inicio#localizacao` e `/cardapio`, com indicação visual da aba ativa (via `usePathname` e observer de scroll em `/inicio`) e componente `HashScrollHandler` para garantir rolagem precisa entre rotas.
+
+**Contexto:** Anteriormente, a raiz `/` havia sido configurada para redirecionar para `/cardapio`, mas os botões de navegação "Início", "Serviços" e "Localização" apontavam para `/`, `/#servicos` e `/#localizacao`. Como resultado, qualquer clique nesses botões batia no redirecionamento e permanecia preso no `/cardapio`, impossibilitando visualizar o conteúdo institucional.
+
+**Impacto:** Usuários que acessam o domínio raiz continuam caindo diretamente no cardápio de vendas. Ao mesmo tempo, agora é possível navegar livremente para Início, Serviços e Localização através do menu (desktop e mobile) e do rodapé, com realce visual da aba ativa e transições suaves.
+
