@@ -143,3 +143,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 **Impacto:** Usuários que acessam o domínio raiz continuam caindo diretamente no cardápio de vendas. Ao mesmo tempo, agora é possível navegar livremente para Início, Serviços e Localização através do menu (desktop e mobile) e do rodapé, com realce visual da aba ativa e transições suaves.
 
+### 2026-11-24 - Módulo de Datas Comemorativas (Admin, Temas Animados e Customização)
+
+**Decisão:** Criação de um módulo completo de Datas Comemorativas gerenciável pelo Painel Admin em `/admin/comemorativa` (`data_comemorativa_config` e `data_comemorativa_produtos`), permitindo ativar/desativar a aba no cardápio, definir rótulo, vincular produtos e customizar textos, fontes Google (Great Vibes, Cinzel, Playfair Display, Montserrat, Caveat) e tamanhos, com Demonstração ao Vivo (Live Preview). No cardápio público (`/cardapio`), foi construída uma arquitetura modular em `src/components/themes/` para temas animados com intros especiais (guardadas em `sessionStorage` para rodar na primeira visita), partículas contínuas e estilização temática em `ProductCard`:
+1. **Natal (`ChristmasTheme`):** Trenó animado, neve suave com `react-snowfall`, pisca-pisca e paleta vermelha natalina elegante.
+2. **Páscoa (`EasterTheme`):** Fundo claro confeiteiro aveludado, coelhinhos silhueta emoldurando o título, ovos decorativos com padrões artesanais e chuva leve de flores/ovinhos.
+3. **Carnaval (`CarnivalTheme`):** Moldura com barras de ouro reluzente, máscaras carnavalescas brasileiras com plumas tropicais, chuva de serpentinas e confetes, e intro explosiva com canhões laterais e máscara veneziana.
+4. **Dia das Mães (`MothersDayTheme`):** Paleta serena em pó de arroz/blush, arranjos de rosas peônia e sálvia nas bordas superiores sem cordas, chuva suave de pétalas e corações com balanço lateral (`@keyframes petalFall`) e desabrochar floral suave.
+
+**Contexto:** O cardápio precisava de recursos dinâmicos para campanhas sazonais e datas festivas sem exigir novas implementações a cada época do ano.
+
+**Impacto:** O administrador controla 100% da identidade comemorativa via painel, com isolamento modular e performance otimizada (respeito a `prefers-reduced-motion` e descarte limpo de efeitos via `AnimatePresence`).
+
+

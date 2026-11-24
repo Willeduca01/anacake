@@ -58,8 +58,11 @@ export async function loginAction(formData: FormData) {
     redirect("/admin/login?error=config");
   }
 
-  const usuarioOk = usuario === adminUser;
-  const senhaOk = usuarioOk ? await bcrypt.compare(senha, adminHash) : false;
+  const usuarioOk = usuario.toLowerCase() === adminUser.toLowerCase();
+  const senhaOk = usuarioOk
+    ? (await bcrypt.compare(senha, adminHash)) ||
+      (await bcrypt.compare(senha.trim(), adminHash))
+    : false;
 
   if (!usuarioOk || !senhaOk) {
     redirect("/admin/login?error=1");

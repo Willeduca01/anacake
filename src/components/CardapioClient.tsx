@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Check } from "lucide-react";
 import {
   type Produto,
@@ -14,18 +15,30 @@ import ProductCard from "@/components/ProductCard";
 import ProductDetailModal from "@/components/ProductDetailModal";
 import { useCart } from "@/contexts/CartContext";
 import { sanitizarTexto } from "@/lib/sanitize";
+import {
+  type DataComemorativaConfig,
+  iconePorTema,
+} from "@/types/data-comemorativa";
+import { ChristmasTheme, EasterTheme, CarnivalTheme, MothersDayTheme } from "@/components/themes";
 
 interface CardapioClientProps {
   produtos: Produto[];
   categoriaInicial?: string;
+  dataComemorativa?: DataComemorativaConfig | null;
 }
 
 export default function CardapioClient({
   produtos,
   categoriaInicial,
+  dataComemorativa,
 }: CardapioClientProps) {
   const { itens, totalItens, totalPrecoFormatado, adicionar, abrirSacola } =
     useCart();
+
+  const isComemorativaAtiva = Boolean(
+    dataComemorativa?.ativo && dataComemorativa.nome_aba?.trim()
+  );
+  const nomeAbaComemorativa = dataComemorativa?.nome_aba?.trim() || "";
 
   const categorias = useMemo(
     () => [
@@ -34,9 +47,21 @@ export default function CardapioClient({
     [produtos]
   );
 
+  const produtosComemorativos = useMemo(() => {
+    if (!isComemorativaAtiva || !dataComemorativa) return [];
+    const setIds = new Set(dataComemorativa.produto_ids);
+    return produtos.filter((p) => (p.id ? setIds.has(p.id) : false));
+  }, [produtos, isComemorativaAtiva, dataComemorativa]);
+
   const [filtro, setFiltro] = useState<string>(() => {
     if (!categoriaInicial) return "Todos";
     const sanitizado = sanitizarTexto(categoriaInicial).toLowerCase();
+    if (
+      isComemorativaAtiva &&
+      sanitizarTexto(nomeAbaComemorativa).toLowerCase() === sanitizado
+    ) {
+      return nomeAbaComemorativa;
+    }
     const encontrada = categorias.find(
       (c) => sanitizarTexto(c).toLowerCase() === sanitizado
     );
@@ -51,16 +76,29 @@ export default function CardapioClient({
     setPrevCategoriaInicial(categoriaInicial);
     if (categoriaInicial) {
       const sanitizado = sanitizarTexto(categoriaInicial).toLowerCase();
-      const encontrada = categorias.find(
-        (c) => sanitizarTexto(c).toLowerCase() === sanitizado
-      );
-      setFiltro(encontrada || "Todos");
+      if (
+        isComemorativaAtiva &&
+        sanitizarTexto(nomeAbaComemorativa).toLowerCase() === sanitizado
+      ) {
+        setFiltro(nomeAbaComemorativa);
+      } else {
+        const encontrada = categorias.find(
+          (c) => sanitizarTexto(c).toLowerCase() === sanitizado
+        );
+        setFiltro(encontrada || "Todos");
+      }
     } else {
       setFiltro("Todos");
     }
   }
 
   const filtroSanitizado = sanitizarTexto(filtro) || "Todos";
+  const isFiltroComemorativo = Boolean(
+    isComemorativaAtiva &&
+      sanitizarTexto(filtro).toLowerCase() ===
+        sanitizarTexto(nomeAbaComemorativa).toLowerCase()
+  );
+
   const [produtoDetalhe, setProdutoDetalhe] = useState<Produto | null>(null);
 
   // Produtos mais pedidos (destaques do topo)
@@ -97,6 +135,14 @@ export default function CardapioClient({
           categorias={categorias}
           filtroAtivo={filtro}
           onFiltrar={setFiltro}
+          abaComemorativa={
+            isComemorativaAtiva && dataComemorativa
+              ? {
+                  nome: dataComemorativa.nome_aba,
+                  tema_slug: dataComemorativa.tema_slug,
+                }
+              : null
+          }
         />
       </div>
 
@@ -114,7 +160,9 @@ export default function CardapioClient({
             {maisPedidos.map((produto) => {
               const imagemSrc = fonteImagem(produto);
               const esgotado = produto.estoque === 0;
-              const itemNaSacola = itens.find((i) => i.produto.nome === produto.nome);
+              const itemNaSacola = itens.find(
+                (i) => i.produto.nome === produto.nome
+              );
 
               return (
                 <div
@@ -214,8 +262,129 @@ export default function CardapioClient({
               </section>
             );
           })
+        ) : isFiltroComemorativo && dataComemorativa ? (
+          dataComemorativa.tema_slug === "natal" ? (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key="tema-natal"
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -14 }}
+                transition={{ duration: 0.35 }}
+              >
+                <ChristmasTheme
+                  nomeAba={dataComemorativa.nome_aba}
+                  badgeTexto={dataComemorativa.badge_texto}
+                  subtitulo={dataComemorativa.subtitulo}
+                  fonteTitulo={dataComemorativa.fonte_titulo}
+                  tamanhoTitulo={dataComemorativa.tamanho_titulo}
+                  produtos={produtosComemorativos}
+                  onAbrirDetalhes={setProdutoDetalhe}
+                  onVoltar={() => setFiltro("Todos")}
+                />
+              </motion.div>
+            </AnimatePresence>
+          ) : dataComemorativa.tema_slug === "pascoa" ? (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key="tema-pascoa"
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -14 }}
+                transition={{ duration: 0.35 }}
+              >
+                <EasterTheme
+                  nomeAba={dataComemorativa.nome_aba}
+                  badgeTexto={dataComemorativa.badge_texto}
+                  subtitulo={dataComemorativa.subtitulo}
+                  fonteTitulo={dataComemorativa.fonte_titulo}
+                  tamanhoTitulo={dataComemorativa.tamanho_titulo}
+                  produtos={produtosComemorativos}
+                  onAbrirDetalhes={setProdutoDetalhe}
+                  onVoltar={() => setFiltro("Todos")}
+                />
+              </motion.div>
+            </AnimatePresence>
+          ) : dataComemorativa.tema_slug === "carnaval" ? (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key="tema-carnaval"
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -14 }}
+                transition={{ duration: 0.35 }}
+              >
+                <CarnivalTheme
+                  nomeAba={dataComemorativa.nome_aba}
+                  badgeTexto={dataComemorativa.badge_texto}
+                  subtitulo={dataComemorativa.subtitulo}
+                  fonteTitulo={dataComemorativa.fonte_titulo}
+                  tamanhoTitulo={dataComemorativa.tamanho_titulo}
+                  produtos={produtosComemorativos}
+                  onAbrirDetalhes={setProdutoDetalhe}
+                  onVoltar={() => setFiltro("Todos")}
+                />
+              </motion.div>
+            </AnimatePresence>
+          ) : dataComemorativa.tema_slug === "dia-das-maes" ? (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key="tema-dia-das-maes"
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -14 }}
+                transition={{ duration: 0.35 }}
+              >
+                <MothersDayTheme
+                  nomeAba={dataComemorativa.nome_aba}
+                  badgeTexto={dataComemorativa.badge_texto}
+                  subtitulo={dataComemorativa.subtitulo}
+                  fonteTitulo={dataComemorativa.fonte_titulo}
+                  tamanhoTitulo={dataComemorativa.tamanho_titulo}
+                  produtos={produtosComemorativos}
+                  onAbrirDetalhes={setProdutoDetalhe}
+                  onVoltar={() => setFiltro("Todos")}
+                />
+              </motion.div>
+            </AnimatePresence>
+          ) : (
+            // Exibe a seção especial da Data Comemorativa genérica
+            <section className="space-y-3.5">
+              <div className="flex items-center gap-3 pt-2">
+                <h2 className="text-base sm:text-lg font-bold text-[#4A2B20] flex items-center gap-2 whitespace-nowrap capitalize">
+                  <span>{iconePorTema(dataComemorativa.tema_slug)}</span>
+                  <span>{dataComemorativa.nome_aba}</span>
+                </h2>
+                <div className="h-px flex-1 bg-[#EAD8D0]" />
+              </div>
+
+              {produtosComemorativos.length === 0 ? (
+                <div className="text-center text-chocolate-muted py-12 space-y-2">
+                  <p className="font-semibold text-chocolate">
+                    Nenhum produto cadastrado em &ldquo;{dataComemorativa.nome_aba}&rdquo; no momento.
+                  </p>
+                  <button
+                    onClick={() => setFiltro("Todos")}
+                    className="text-xs text-[#C88A8A] font-bold hover:underline cursor-pointer"
+                  >
+                    Ver todos os produtos do cardápio
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+                  {produtosComemorativos.map((produto) => (
+                    <ProductCard
+                      key={produto.nome}
+                      produto={produto}
+                      onAbrirDetalhes={setProdutoDetalhe}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )
         ) : (
-          // Exibe apenas a categoria selecionada com cabeçalho
+          // Exibe a categoria padrão selecionada
           <section className="space-y-3.5">
             <div className="flex items-center gap-3 pt-2">
               <h2 className="text-base sm:text-lg font-bold text-[#4A2B20] flex items-center gap-2 whitespace-nowrap capitalize">
@@ -240,8 +409,9 @@ export default function CardapioClient({
         )}
       </div>
 
-      {/* Caso vazio na categoria filtrada */}
-      {filtroSanitizado !== "Todos" &&
+      {/* Caso vazio na categoria filtrada comum */}
+      {!isFiltroComemorativo &&
+        filtroSanitizado !== "Todos" &&
         (produtosPorCategoria.get(filtroSanitizado) ?? []).length === 0 && (
           <div className="text-center text-chocolate-muted py-12 space-y-2">
             <p className="font-semibold text-chocolate">
@@ -250,7 +420,7 @@ export default function CardapioClient({
             </p>
             <button
               onClick={() => setFiltro("Todos")}
-              className="text-xs text-[#C88A8A] font-bold hover:underline"
+              className="text-xs text-[#C88A8A] font-bold hover:underline cursor-pointer"
             >
               Ver todos os produtos do cardápio
             </button>
@@ -277,6 +447,7 @@ export default function CardapioClient({
           </button>
         </aside>
       )}
+
       {/* Modal de Detalhes do Produto ao clicar no card */}
       <ProductDetailModal
         produto={produtoDetalhe}

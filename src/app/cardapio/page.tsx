@@ -1,4 +1,5 @@
 import { listarCardapioPublico } from "@/lib/produtos";
+import { obterDataComemorativaConfig } from "@/lib/data-comemorativa";
 import CardapioClient from "@/components/CardapioClient";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,10 @@ export default async function CardapioPage({
 }) {
   const resolvedParams = searchParams ? await searchParams : undefined;
   const categoriaInicial = resolvedParams?.categoria;
-  const produtos = await listarCardapioPublico();
+  const [produtos, dataComemorativa] = await Promise.all([
+    listarCardapioPublico(),
+    obterDataComemorativaConfig(),
+  ]);
 
   return (
     <section className="pt-4 pb-16 sm:py-16 bg-warm-white min-h-[70vh]">
@@ -35,6 +39,7 @@ export default async function CardapioPage({
           <CardapioClient
             produtos={produtos}
             categoriaInicial={categoriaInicial}
+            dataComemorativa={dataComemorativa}
           />
         )}
       </div>

@@ -31,11 +31,19 @@ function StockBadge({ estoque }: { estoque: number }) {
 interface ProductCardProps {
   produto: Produto;
   onAbrirDetalhes?: (produto: Produto) => void;
+  isChristmasTheme?: boolean;
+  isEasterTheme?: boolean;
+  isCarnivalTheme?: boolean;
+  isMothersDayTheme?: boolean;
 }
 
 export default function ProductCard({
   produto,
   onAbrirDetalhes,
+  isChristmasTheme,
+  isEasterTheme,
+  isCarnivalTheme,
+  isMothersDayTheme,
 }: ProductCardProps) {
   const { itens, adicionar } = useCart();
   const itemNaSacola = itens.find((i) => i.produto.nome === produto.nome);
@@ -61,7 +69,17 @@ export default function ProductCard({
       exit={{ opacity: 0, y: 14 }}
       transition={{ duration: 0.3 }}
       onClick={handleCardClick}
-      className="group relative flex items-center gap-3.5 rounded-2xl bg-white border border-[#F3E8E2] hover:border-[#E8D8CF] p-3 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+      className={`group relative flex items-center gap-3.5 rounded-2xl bg-white p-3 shadow-sm transition-all duration-200 cursor-pointer ${
+        isChristmasTheme
+          ? "border border-amber-300/60 hover:border-amber-400 shadow-md hover:shadow-amber-500/15"
+          : isEasterTheme
+            ? "border border-[#D4A373]/60 hover:border-[#D4A373] shadow-md hover:shadow-[#D4A373]/20"
+            : isCarnivalTheme
+              ? "border border-[#FF007F]/40 hover:border-[#00F0FF]/80 shadow-md hover:shadow-[0_4px_20px_rgba(217,3,104,0.25)]"
+              : isMothersDayTheme
+                ? "border border-[#E5989B]/50 hover:border-[#E5989B] shadow-md hover:shadow-[0_4px_20px_rgba(229,152,155,0.25)]"
+                : "border border-[#F3E8E2] hover:border-[#E8D8CF] hover:shadow-md"
+      }`}
     >
       {/* Coluna da esquerda (Imagem com tamanho fixo e badge) */}
       <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 rounded-xl overflow-hidden bg-cream">
@@ -107,13 +125,35 @@ export default function ProductCard({
             type="button"
             onClick={handleAdicionar}
             disabled={esgotado}
-            className={`rounded-xl px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 shadow-xs transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`relative overflow-hidden rounded-xl px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 shadow-xs transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
               itemNaSacola
                 ? "bg-[#A76D6D] text-white"
-                : "bg-[#C88A8A] hover:bg-[#B77979] text-white"
+                : isChristmasTheme
+                  ? "bg-gradient-to-r from-[#8C131B] to-[#A81822] hover:from-[#730D14] hover:to-[#8C131B] text-white shadow-sm ring-1 ring-amber-300/40"
+                  : isEasterTheme
+                    ? "bg-gradient-to-r from-[#592D23] via-[#753B2E] to-[#592D23] hover:from-[#47221A] hover:to-[#592D23] text-white shadow-sm ring-1 ring-[#D4A373]/50"
+                    : isCarnivalTheme
+                      ? "bg-gradient-to-r from-[#D90368] via-[#B5179E] to-[#7209B7] hover:from-[#FF007F] hover:to-[#560BAD] text-white shadow-sm ring-1 ring-[#FFD166]/60"
+                      : isMothersDayTheme
+                        ? "bg-gradient-to-r from-[#9D4452] via-[#B85766] to-[#8C3A48] hover:from-[#8C3A48] hover:to-[#742F3C] text-white shadow-sm ring-1 ring-[#FFD7BA]/50"
+                        : "bg-[#C88A8A] hover:bg-[#B77979] text-white"
             }`}
             aria-label={`Adicionar ${produto.nome}`}
           >
+            {/* Brilho dourado/rosé sutil passando no botão de compra em temas comemorativos */}
+            {(isChristmasTheme || isEasterTheme || isCarnivalTheme || isMothersDayTheme) && !esgotado && (
+              <span
+                className={`absolute inset-0 bg-gradient-to-r from-transparent ${
+                  isEasterTheme
+                    ? "via-[#FFDEAA]/45"
+                    : isCarnivalTheme
+                      ? "via-[#FFD166]/50"
+                      : isMothersDayTheme
+                        ? "via-[#FFE5D9]/50"
+                        : "via-amber-200/40"
+                } to-transparent -translate-x-full animate-[shimmer_2.8s_infinite] pointer-events-none`}
+              />
+            )}
             {itemNaSacola ? (
               <>
                 <Check className="h-3.5 w-3.5 stroke-[2.5]" />
